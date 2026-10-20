@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Technical Design Document — Tandem Household Hub</title>
+<style>
+@page{size:A4;margin:0}
+*{box-sizing:border-box;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+body{margin:0;font-family:'Liberation Sans','Noto Sans',sans-serif;color:#1e293b;font-size:10.2pt;line-height:1.48}
+.page{min-height:297mm;padding:14mm 17mm 14mm 17mm;position:relative;background:#fff}
+h1{font-size:28pt;line-height:1.15;color:#0f2a3d;margin:0 0 10px}
+h2{font-size:16pt;color:#0f2a3d;border-bottom:2.5px solid #0e7490;padding-bottom:6px;margin:0 0 12px}
+h3{font-size:11.5pt;color:#0e7490;margin:16px 0 6px}
+h4{font-size:10.5pt;color:#0f2a3d;margin:12px 0 4px}
+p{margin:0 0 8px} ul,ol{margin:4px 0 10px;padding-left:18px} li{margin-bottom:4px}
+table{width:100%;border-collapse:collapse;font-size:9.2pt;margin:8px 0 14px}
+th{background:#0f2a3d;color:#fff;text-align:left;padding:6px 7px;font-weight:700}
+td{padding:5px 7px;border-bottom:1px solid #e2e8f0;vertical-align:top}
+tr:nth-child(even) td{background:#f8fafc}
+code{font-family:'Liberation Mono','Noto Sans Mono',monospace;font-size:8.8pt;background:#f1f5f9;padding:1px 4px;border-radius:3px;color:#0f2a3d}
+pre{font-family:'Liberation Mono',monospace;font-size:8.4pt;background:#0f2a3d;color:#e2e8f0;padding:10px 12px;border-radius:6px;line-height:1.45;white-space:pre-wrap;margin:8px 0 12px}
+.callout{background:#ecfeff;border-left:4px solid #0e7490;padding:10px 12px;margin:10px 0;font-size:10pt}
+.warn{background:#fffbeb;border-left:4px solid #d97706;padding:10px 12px;margin:10px 0;font-size:10pt}
+.kicker{font-size:9pt;letter-spacing:2px;text-transform:uppercase;color:#0e7490;font-weight:700;margin-bottom:10px}
+.meta{font-size:9.5pt;color:#64748b}
+.footer{position:absolute;bottom:8mm;left:17mm;right:17mm;font-size:8.5pt;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:6px;display:flex;justify-content:space-between}
+.cover{padding-top:34mm}
+.badge{display:inline-block;background:#0e7490;color:#fff;padding:4px 10px;border-radius:20px;font-size:9pt;font-weight:700;margin-bottom:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card{border:1px solid #e2e8f0;border-radius:8px;padding:11px 12px;break-inside:avoid}
+.card b{color:#0f2a3d}
+.small{font-size:9.5pt;color:#475569}
+section,table,.card{break-inside:avoid}
+svg{width:100%;height:auto}
+</style></head><body>
+
+<div class="page cover">
+<div class="badge">TECHNICAL DESIGN DOCUMENT &nbsp;•&nbsp; v1.0</div>
+<h1>Tandem — Household Hub<br>for Couples &amp; Families</h1>
+<p style="font-size:13pt;color:#475569;max-width:88%">System architecture, data model, API contracts, security design, and delivery plan for a shared household platform covering tasks, calendar, finance, inventory, and fitness — designed to extend later to home automation.</p>
+<table>
+<tr><th style="width:28%">Field</th><th>Detail</th></tr>
+<tr><td>Product name</td><td><b>Tandem</b> — confirmed product name (formerly working name &ldquo;Hearth&rdquo;)</td></tr>
+<tr><td>Companion document</td><td>Product Requirement Document (PRD) — Tandem, v1.0. This TDD implements PRD sections 5.1–5.5 (MVP) and reserves extension points for PRD section 8 (Phase 3).</td></tr>
+<tr><td>Status</td><td>Draft for engineering review — ready to estimate and build from</td></tr>
+<tr><td>Date</td><td>20 October 2026</td></tr>
+<tr><td>Authors / Owner</td><td>Product &amp; Engineering — Tech Lead (owner), Product Manager, QA Lead (reviewers)</td></tr>
+<tr><td>Reviewers</td><td>Security reviewer, DevOps / Platform, Design Lead</td></tr>
+<tr><td>Target release</td><td>MVP in 12–14 weeks (see Section 11.4); dates are planning estimates, not commitments</td></tr>
+</table>
+<h3>How to read this document</h3>
+<p>Sections 1–3 are decisions: goals, architecture, and stack. Sections 4–6 are the build contract: schema, APIs, and per-module logic. Sections 7–10 are cross-cutting: security, real-time behaviour, integrations, and operations. Section 11 covers testing, risks, and the Architecture Decision Records (ADRs) that record <i>why</i> each major choice was made, so a future engineer can revisit them without re-litigating them.</p>
+<div class="callout"><b>One-sentence architecture:</b> A TypeScript modular monolith — Next.js web/PWA front end, a versioned REST + WebSocket API, PostgreSQL with row-level security per household, Redis for cache/queues, and managed object storage — deployed as containers on AWS with Terraform. No microservices until a measured bottleneck justifies one.</div>
+<div class="footer"><span>Tandem — Technical Design Document v1.0</span><span>Confidential — Internal</span></div>
+</div>
+
+<div class="page">
+<h2>Contents</h2>
+<table>
+<tr><td style="width:8%"><b>1</b></td><td>Design goals, principles &amp; non-functional requirements</td><td style="width:12%">p. 3</td></tr>
+<tr><td><b>2</b></td><td>System architecture</td><td>p. 4</td></tr>
+<tr><td><b>3</b></td><td>Technology stack &amp; alternatives</td><td>p. 5</td></tr>
+<tr><td><b>4</b></td><td>Data model &amp; database design</td><td>p. 6–8</td></tr>
+<tr><td><b>5</b></td><td>API design &amp; contracts</td><td>p. 9–11</td></tr>
+<tr><td><b>6</b></td><td>Module designs: Tasks, Calendar, Finance, Inventory, Fitness</td><td>p. 12–14</td></tr>
+<tr><td><b>7</b></td><td>Authentication, security &amp; privacy</td><td>p. 15–16</td></tr>
+<tr><td><b>8</b></td><td>Real-time sync, notifications &amp; background jobs</td><td>p. 17</td></tr>
+<tr><td><b>9</b></td><td>Integrations &amp; future home automation</td><td>p. 18</td></tr>
+<tr><td><b>10</b></td><td>Infrastructure, DevOps &amp; observability</td><td>p. 19</td></tr>
+<tr><td><b>11</b></td><td>Testing, risks, ADRs &amp; delivery roadmap</td><td>p. 20–21</td></tr>
+<tr><td><b>A</b></td><td>Appendix — Environments, naming &amp; glossary</td><td>p. 22</td></tr>
+</table>
+<h3>Conventions used in this document</h3>
+<ul>
+<li><b>Must / Should / May</b> follow RFC 2119: Must = required for MVP acceptance; Should = expected unless a reviewer approves otherwise; May = optional.</li>
+<li>All timestamps are stored in UTC (<code>timestamptz</code>) and rendered in the household's IANA timezone. All money is stored as integer minor units (cents/paise) — never floats.</li>
+<li><code>household_id</code> appears on every tenant-owned table. Any query without it is a defect.</li>
+<li>API examples are illustrative contracts; the generated OpenAPI 3.1 document is the normative source once the API skeleton is merged.</li>
+</ul>
+<h3>Scale assumptions (design basis)</h3>
+<table>
+<tr><th>Assumption</th><th>MVP design point</th><th>Headroom</th></tr>
+<tr><td>Households</td><td>10,000 households, avg. 2.4 members</td><td>Schema and tenancy model unchanged to 500k households; sharding not required</td></tr>
+<tr><td>Concurrency</td><td>~1,500 concurrent WebSocket connections at peak</td><td>Redis pub/sub fan-out supports horizontal API replicas</td></tr>
+<tr><td>Data volume</td><td>~2M transactions, ~5M tasks/events in year 1</td><td>Partition transactions by month beyond 20M rows</td></tr>
+<tr><td>Traffic shape</td><td>Morning (07:00–09:00) and evening (19:00–22:00) peaks, household-local time</td><td>Autoscaling on CPU + connection count</td></tr>
+</table>
+<p class="small">If real usage exceeds these assumptions by 10x, revisit ADR-001 (modular monolith) and ADR-004 (single-region) first — both record their revisit triggers.</p>
+<div class="footer"><span>Tandem — Technical Design Document v1.0</span><span>Confidential — Internal</span></div>
+</div>
+
+<div class="page">
+<h2>1. Design goals, principles &amp; non-functional requirements</h2>
+<h3>1.1 Goals</h3>
+<ol>
+<li><b>One household, one source of truth.</b> Two partners editing the same list, budget, or calendar must never create divergent copies.</li>
+<li><b>Isolation by construction.</b> A bug in a query must not be able to leak another household's finance or health data — isolation is enforced in the database, not just in application code.</li>
+<li><b>Fast on a mid-range phone on 4G.</b> The primary device is mobile; the web app is a Progressive Web App (PWA) first, native wrappers later.</li>
+<li><b>Boring, operable technology.</b> A small team must be able to run this at 2 a.m.: managed services, one deployable API, full observability.</li>
+<li><b>Extensible without rewrites.</b> Fitness (MVP-Lite) and home automation (Phase 3) plug into the same tenancy, events, and notification spine.</li>
+</ol>
+<h3>1.2 Principles</h3>
+<div class="grid2">
+<div class="card"><b>Modular monolith first</b><br>Modules (Tasks, Finance…) are packages with enforced boundaries inside one deployable. Extract a service only on measured need.</div>
+<div class="card"><b>Server is authoritative</b><br>Clients keep an optimistic cache; the server owns conflict resolution, permissions, and all money maths.</div>
+<div class="card"><b>Events for side effects</b><br>Domain events (<code>transaction.created</code>, <code>stock.low</code>) drive notifications, metrics, and automations — modules never call each other directly for side effects.</div>
+<div class="card"><b>Privacy by default</b><br>Per-module visibility (shared / private), encryption at rest and in transit, data export and deletion as first-class features.</div>
+</div>
+<h3>1.3 Non-functional requirements</h3>
+<table>
+<tr><th style="width:26%">Quality</th><th>Target (MVP)</th><th>How verified</th></tr>
+<tr><td>Availability</td><td>99.9% monthly for API (excl. planned maintenance)</td><td>Uptime SLO dashboard, error-budget alerts</td></tr>
+<tr><td>Latency</td><td>p95 API read &lt; 300 ms, write &lt; 500 ms (same region); LCP &lt; 2.5 s on 4G</td><td>APM percentiles, Lighthouse CI</td></tr>
+<tr><td>Sync freshness</td><td>Partner's change visible &lt; 2 s when both online</td><td>WebSocket end-to-end synthetic check</td></tr>
+<tr><td>Durability</td><td>RPO &le; 1 h (PITR backups), RTO &le; 4 h</td><td>Quarterly restore drill</td></tr>
+<tr><td>Security</td><td>OWASP ASVS L2; zero cross-household access in pen-test</td><td>SAST/DAST in CI, annual pen-test</td></tr>
+<tr><td>Accessibility</td><td>WCAG 2.2 AA on core flows</td><td>axe CI + manual screen-reader pass</td></tr>
+<tr><td>Scalability</td><td>Stateless API replicas; DB is the only stateful tier</td><td>Load test at 3x design point before launch</td></tr>
+</table>
+<div class="footer"><span>Tandem — Technical Design Document v1.0</span><span>Confidential — Internal</span></div>
+</div>
+
+<div class="page">
+<h2>2. System architecture</h2>
+<svg viewBox="0 0 680 350" role="img" aria-label="System architecture diagram">
+<rect x="10" y="10" width="660" height="330" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
+<text x="24" y="32" font-size="12.5" font-weight="700" fill="#0f2a3d">CLIENTS</text>
+<rect x="24" y="42" width="190" height="46" rx="6" fill="#fff" stroke="#0e7490"/><text x="36" y="62" font-size="12.5" fill="#0f2a3d">Web / PWA (Next.js)</text><text x="36" y="78" font-size="11.5" fill="#64748b">Desktop + mobile, offline</text>
+<rect x="230" y="42" width="190" height="46" rx="6" fill="#fff" stroke="#0e7490"/><text x="242" y="62" font-size="12.5" fill="#0f2a3d">Mobile wrapper (later)</text><text x="242" y="78" font-size="11.5" fill="#64748b">Same app, push + HealthKit</text>
+<rect x="436" y="42" width="220" height="46" rx="6" fill="#fff" stroke="#94a3b8" stroke-dasharray="4"/><text x="448" y="62" font-size="12.5" fill="#0f2a3d">Device gateway (Phase 3)</text><text x="448" y="78" font-size="11.5" fill="#64748b">Matter / HomeKit / vendors</text>
+<text x="24" y="118" font-size="12.5" font-weight="700" fill="#0f2a3d">EDGE &amp; API</text>
+<rect x="24" y="128" width="200" height="46" rx="6" fill="#ecfeff" stroke="#0e7490"/><text x="36" y="148" font-size="12.5" fill="#0f2a3d">CDN + WAF</text><text x="36" y="164" font-size="11.5" fill="#64748b">Static, TLS, rate limits</text>
+<rect x="240" y="128" width="200" height="46" rx="6" fill="#ecfeff" stroke="#0e7490"/><text x="252" y="148" font-size="12.5" fill="#0f2a3d">API (modular monolith)</text><text x="252" y="164" font-size="11.5" fill="#64748b">REST + WS, auth, modules</text>
+<rect x="456" y="128" width="200" height="46" rx="6" fill="#ecfeff" stroke="#0e7490"/><text x="468" y="148" font-size="12.5" fill="#0f2a3d">Worker</text><text x="468" y="164" font-size="11.5" fill="#64748b">Reminders, imports, digests</text>
+<text x="24" y="204" font-size="12.5" font-weight="700" fill="#0f2a3d">DATA &amp; SERVICES</text>
+<rect x="24" y="214" width="150" height="46" rx="6" fill="#0f2a3d"/><text x="36" y="234" font-size="12.5" fill="#fff">PostgreSQL 16</text><text x="36" y="250" font-size="11.5" fill="#cbd5e1">Primary store, RLS</text>
+<rect x="188" y="214" width="150" height="46" rx="6" fill="#0f2a3d"/><text x="200" y="234" font-size="12.5" fill="#fff">Redis</text><text x="200" y="250" font-size="11.5" fill="#cbd5e1">Cache, queues, pub/sub</text>
+<rect x="352" y="214" width="150" height="46" rx="6" fill="#0f2a3d"/><text x="364" y="234" font-size="12.5" fill="#fff">Object storage (S3)</text><text x="364" y="250" font-size="11.5" fill="#cbd5e1">Receipts, photos</text>
+<rect x="516" y="214" width="140" height="46" rx="6" fill="#0f2a3d"/><text x="528" y="234" font-size="12.5" fill="#fff">Push / Email / SMS</text><text x="528" y="250" font-size="11.5" fill="#cbd5e1">FCM/APNs, SES</text>
+<rect x="24" y="278" width="632" height="46" rx="6" fill="#fff" stroke="#cbd5e1"/><text x="36" y="298" font-size="12.5" fill="#0f2a3d">External adapters: bank aggregation • calendar sync • barcode data • fitness sync</text><text x="36" y="314" font-size="11.5" fill="#64748b">Each adapter is replaceable, rate-limit aware, and stores raw payloads.</text>
+</svg>
+<h3>2.1 Request flow (example: partner adds an expense)</h3>
+<ol>
+<li>Client sends <code>POST /v1/transactions</code> with a JWT access token and an <code>Idempotency-Key</code>. CDN/WAF terminates TLS and applies per-IP rate limits.</li>
+<li>API auth middleware validates the token, loads membership, and sets the PostgreSQL session variable <code>app.household_id</code> for row-level security (RLS).</li>
+<li>Finance module validates the payload, writes the transaction and its splits in one DB transaction, and emits <code>transaction.created</code> to the internal event bus.</li>
+<li>Subscribers react asynchronously: budget-metrics cache is invalidated, the budget-alert rule is evaluated, and a WebSocket message is published via Redis to the partner's connected clients.</li>
+<li>Response returns <code>201</code> with the created resource and an <code>ETag</code>; the originating client reconciles its optimistic entry by client-generated ID.</li>
+</ol>
+<h3>2.2 Module boundaries</h3>
+<p>Modules communicate through typed in-process interfaces and domain events only — never by reading another module's tables directly. Cross-module reads (e.g., the dashboard) go through a read-model / view layer. Lint rules (dependency-cruiser or equivalent) fail CI on a boundary violation. This is what makes a later extraction — most likely candidate: the worker / integrations tier — a deployment change, not a rewrite.</p>
+<div class="footer"><span>Tandem — Technical Design Document v1.0</span><span>Confidential — Internal</span></div>
+</div>
+
+<div class="page">
+<h2>3. Technology stack &amp; alternatives</h2>
+<table>
+<tr><th style="width:22%">Layer</th><th style="width:34%">Choice (MVP)</th><th>Rationale</th></tr>
+<tr><td>Language</td><td>TypeScript 5.x end-to-end</td><td>One language across web, API, and shared validation schemas (Zod); large hiring pool</td></tr>
+<tr><td>Web / PWA</td><td>Next.js (App Router) + React, Tailwind CSS</td><td>SSR for first paint, PWA offline shell, mature a11y ecosystem</td></tr>
+<tr><td>API</td><td>Node.js (LTS) + Fastify (or NestJS if team prefers DI structure)</td><td>Fast, schema-first validation, WebSocket support via plugins</td></tr>
+<tr><td>Database</td><td>PostgreSQL 16 (managed — RDS / Aurora Serverless v2)</td><td>Relational integrity for money, RLS for tenancy, JSONB where flexibility helps, PITR backups</td></tr>
+<tr><td>ORM / queries</td><td>Prisma or Drizzle + raw SQL for reports</td><td>Type-safe access; escape hatch for metric aggregations</td></tr>
+<tr><td>Cache / queue</td><td>Redis (managed) + BullMQ</td><td>Pub/sub for sync, delayed jobs for reminders, rate-limit counters</td></tr>
+<tr><td>Files</td><td>S3-compatible object storage + CDN, pre-signed uploads</td><td>Receipts/photos never pass through the API process</td></tr>
+<tr><td>Auth</td><td>OIDC via managed IdP (e.g., Cognito / Auth0 / Clerk) + app-side membership</td><td>Do not hand-roll passwords, MFA, or social login</td></tr>
+<tr><td>Push / comms</td><td>FCM + APNs via one provider; transactional email via SES</td><td>Single notification service owns templates and preferences</td></tr>
+<tr><td>Infra as code</td><td>Terraform; containers on ECS Fargate (or App Runner at smallest scale)</td><td>Matches common DevOps practice; reproducible environments</td></tr>
+<tr><td>Observability</td><td>OpenTelemetry → Datadog or Grafana stack; Sentry for client errors</td><td>Traces, metrics, logs with <code>household_id</code> as a trace tag (never in plain logs for finance payloads)</td></tr>
+</table>
+<div class="callout"><b>Alternative stack (equally valid):</b> A Python-first team can implement the identical architecture with Django + Django REST Framework (or FastAPI), Celery instead of BullMQ, and the same PostgreSQL/Redis/S3 tiers. The contracts in Sections 4–6 are stack-neutral on purpose. Pick one stack based on the actual team's fluency — do not mix both in MVP.</div>
+<h3>3.1 What we deliberately do not use in MVP</h3>
+<ul>
+<li><b>Microservices / Kubernetes:</b> operational cost with no MVP-scale benefit; containers on a managed orchestrator are enough. Revisit trigger in ADR-001.</li>
+<li><b>GraphQL:</b> REST + OpenAPI is simpler to cache, secure per-resource, and generate clients from. Revisit if client query diversity becomes painful.</li>
+<li><b>A separate analytics database:</b> finance metrics are PostgreSQL aggregations + materialised views until volume proves otherwise (Section 6.3).</li>
+<li><b>Blockchain / local-first CRDT sync:</b> server-authoritative sync with optimistic UI meets the freshness target with far less complexity.</li>
+</ul>
+<div class="footer"><span>Tandem — Technical Design Document v1.0</span><span>Confidential — Internal</span></div>
+</div>
+
+<div class="page">
+<h2>4. Data model &amp; database design</h2>
+<h3>4.1 Tenancy and common rules</h3>
+<ul>
+<li>Every tenant table has <code>id uuid PK</code>, <code>household_id uuid FK</code>, <code>created_at / updated_at timestamptz</code>, <code>created_by uuid</code>, and <code>deleted_at timestamptz NULL</code> (soft delete; hard purge after 30 days).</li>
+<li>RLS is enabled on every tenant table with policy <code>household_id = current_setting('app.household_id')::uuid</code>. The API connects as a non-owner role so RLS cannot be bypassed by accident.</li>
+<li>Optimistic concurrency: mutable resources carry <code>version int</code>; updates require <code>If-Match</code>. Conflicts return <code>409</code> with the current resource.</li>
+<li>Money: <code>amount_minor bigint</code> + <code>currency char(3)</code> (ISO 4217). Quantities: <code>numeric(12,3)</code>. Dates that are household-local (birthdays, due dates) use <code>date</code>, never timestamps.</li>
+</ul>
+<h3>4.2 Core identity tables</h3>
+<table>
+<tr><th style="width:24%">Table</th><th>Key columns &amp; notes</th></tr>
+<tr><td><code>users</code></td><td><code>id, email (citext, unique), display_name, avatar_url, locale, timezone, idp_subject (unique)</code> — identity only; no household data</td></tr>
+<tr><td><code>households</code></td><td><code>id, name, currency, timezone, week_start (0–6), created_by</code></td></tr>
+<tr><td><code>memberships</code></td><td><code>household_id, user_id, role (owner|admin|member|child|guest), status, UNIQUE(household_id,user_id)</code></td></tr>
+<tr><td><code>invitations</code></td><td><code>household_id, email, role, token_hash, expires_at, accepted_at</code> — single-use, 7-day expiry</td></tr>
+<tr><td><code>module_visibility</code></td><td><code>household_id, user_id, module, visibility (shared|private)</code> — e.g., a member may keep fitness private</td></tr>
+<tr><td><code>attachments</code></td><td><code>household_id, owner_type, owner_id, storage_key, mime, size_bytes, scan_status</code></td></tr>
+<tr><td><code>audit_log</code></td><td><code>household_id, actor_id, action, entity_type, entity_id, diff jsonb, at</code> — append-only</td></tr>
+<tr><td><code>notifications</code></td><td><code>user_id, household_id, type, payload jsonb, read_at, delivery_status</code></td></tr>
+</table>
+</div>
+<div class="page">
+<h3>4.3 Module tables (summary — full DDL lives in migrations)</h3>
+<table>
+<tr><th style="width:24%">Module</th><th>Tables</th></tr>
+<tr><td>Tasks</td><td><code>task_lists, tasks (list_id, title, notes, assignee_id, priority, due_at, recurrence_rule, status, position), task_completions</code></td></tr>
+<tr><td>Calendar</td><td><code>calendars, events (calendar_id, title, starts_at, ends_at, all_day, timezone, rrule, exdates, location), event_attendees, external_calendar_links</code></td></tr>
+<tr><td>Finance</td><td><code>accounts, categories, transactions, transaction_splits, budgets, budget_periods, goals (savings), recurring_schedules, imports</code> — see 4.4</td></tr>
+<tr><td>Inventory</td><td><code>locations (room/storage hierarchy), items, stock_levels, shopping_lists, shopping_items, products (barcode catalogue cache)</code></td></tr>
+<tr><td>Fitness</td><td><code>fitness_goals, metric_samples (type, value, unit, recorded_at, source), workouts, challenges, challenge_entries</code> — samples partitioned by month if volume grows</td></tr>
+<tr><td>Platform</td><td><code>domain_events (outbox), push_devices, user_preferences, feature_flags</code></td></tr>
+</table>
+<h3>4.3.1 Key relationships</h3>
+<table>
+<tr><th style="width:32%">Relationship</th><th>Rule</th></tr>
+<tr><td>Household → Memberships → Users</td><td>Many-to-many via <code>memberships</code>; a user may belong to several households (e.g., own family + parents) and switches context explicitly</td></tr>
+<tr><td>Household → all module rows</td><td>Every module row is owned by exactly one household; no row is ever shared across households — sharing happens by membership, never by copying data</td></tr>
+<tr><td>Transaction → Splits, Account, Category</td><td>A transaction belongs to one account and has 1..n splits; a transfer has exactly 2 transactions linked as a pair</td></tr>
+<tr><td>Item → Stock levels → Locations</td><td>An item may be stocked in several locations (rice in pantry + garage); quantity is tracked per item-location pair</td></tr>
+<tr><td>User → Fitness samples</td><td>Samples are user-owned; household views aggregate only members who opted into sharing (Section 6.5)</td></tr>
+<tr><td>Event / Task → Recurrence</td><td>One master row per series; occurrences are derived, so editing the master updates the whole future series consistently</td></tr>
+</table>
+<p class="small">Referential integrity is enforced with foreign keys throughout. Deletes are soft by default; the only hard-delete cascades are inside a household purge (Section 7.4) and expired invitation cleanup.</p>
+<div class="footer"><span>Tandem — Technical Design Document v1.0</span><span>Confidential — Internal</span></div>
+</div>
+
+<div class="page">
+<h2>4. Data model (continued)</h2>
+<h3>4.4 Finance schema — the integrity-critical part</h3>
+<pre>accounts        id, household_id, name, type (cash|bank|card|wallet|loan),
+                 currency, opening_balance_minor, archived
+transactions    id, household_id, account_id, type (income|expense|transfer),
+                 amount_minor (&gt;0, sign from type), currency,
+                 category_id NULL, merchant, note, occurred_at (date),
+                 source (manual|import|recurring|rule), external_id NULL,
+                 transfer_pair_id NULL, created_by, visibility
+                 UNIQUE(household_id, account_id, external_id) WHERE external_id IS NOT NULL
+transaction_splits  transaction_id, category_id, amount_minor, note
+                 -- split amounts must sum to the transaction amount (DB trigger)
+budgets         id, household_id, category_id NULL (= overall), period (monthly|custom),
+                 amount_minor, rollover boolean, alert_thresholds int[] {50,80,100}
+goals           id, household_id, name, target_minor, current_minor (derived),
+                 target_date, account_id NULL, priority
+recurring_schedules id, household_id, template jsonb, rrule, next_run_at, active</pre>
+<ul>
+<li><b>Balances are derived, never stored as truth:</b> account balance = opening balance + signed sum of transactions. A materialised balance cache is maintained for list screens and reconciled nightly; any mismatch pages the on-call (it indicates a bug, not user error).</li>
+<li><b>Transfers</b> are two linked transactions (<code>transfer_pair_id</code>) created atomically; deleting one deletes both.</li>
+<li><b>Imports</b> are idempotent via the <code>external_id</code> unique constraint plus a fuzzy de-duplication pass (same account, amount, date ±2 days, similar merchant) flagged for user review — never silently merged.</li>
+<li><b>Budget actuals</b> are computed from transactions by category and period; <code>budget_periods</code> snapshots a closed month so historical reports never change when categories are renamed.</li>
+</ul>
+<h3>4.5 Indexing &amp; performance rules</h3>
+<ul>
+<li>Composite index on every tenant table: <code>(household_id, &lt;primary access column&gt;)</code> — e.g., <code>transactions(household_id, occurred_at DESC)</code>, <code>tasks(household_id, due_at)</code> where status is open.</li>
+<li>Partial indexes for hot paths: open tasks, upcoming events (<code>starts_at</code> within window), low stock (<code>quantity &lt;= reorder_threshold</code>).</li>
+<li>Full-text search (groceries, merchants, tasks) via PostgreSQL <code>tsvector</code> + <code>pg_trgm</code>; no external search engine in MVP.</li>
+<li>All list endpoints use cursor pagination (<code>limit</code> max 100); offset pagination is prohibited on tenant tables.</li>
+<li>Slow-query log at 200 ms in staging; every migration ships with an <code>EXPLAIN ANALYZE</code> note for its main query.</li>
+</ul>
+<h3>4.6 Migrations, seeds &amp; data lifecycle</h3>
+<p>Schema changes ship as versioned migrations (Prisma Migrate / Alembic equivalent), applied by CI before the new API version receives traffic; expand-migrate-contract for any destructive change. Seed data creates the default category taxonomy, units, and task lists used at household creation — the same seeds power demo mode. Retention: soft-deleted rows purged after 30 days; audit log retained 24 months; backups: daily snapshots + WAL PITR, 35-day retention, encrypted with a managed KMS key.</p>
+<div class="footer"><span>Tandem — Technical Design Document v1.0</span><span>Confidential — Internal</span></div>
+</div>
+
+<div class="page">
+<h2>5. API design &amp; contracts</h2>
+<h3>5.1 Style rules</h3>
+<ul>
+<li>REST over HTTPS, JSON, versioned in the path: <code>/v1/…</code>. OpenAPI 3.1 is generated from the validation schemas and published in CI; breaking changes require <code>/v2</code>.</li>
+<li>Auth: <code>Authorization: Bearer &lt;JWT&gt;</code> (15-min access token) + rotating refresh token (httpOnly, Secure cookie for web; secure storage on mobile). Every request resolves the active household from the membership claim or <code>X-Household-Id</code> header, validated against membership.</li>
+<li>Errors use RFC 9457 Problem Details: <code>{type, title, status, detail, code}</code> with a stable machine <code>code</code> (e.g., <code>budget_exceeded_warning</code>, <code>version_conflict</code>).</li>
+<li>Writes accept <code>Idempotency-Key</code> (UUID); keys are stored 24 h and replay returns the original response. Updates require <code>If-Match: &lt;version&gt;</code>.</li>
+<li>Rate limits: 300 req/min per user (general), 30/min for imports and auth-adjacent endpoints, 10/min for invite sends. Limits return <code>429</code> with <code>Retry-After</code>.</li>
+<li>Filtering: <code>?status=open&amp;assignee=me&amp;from=…&amp;to=…</code>; sorting allow-listed per resource; responses wrap lists as <code>{data:[], next_cursor}</code>.</li>
+</ul>
+</div>
+<div class="page">
+<h3>5.2 Endpoint catalogue (core)</h3>
+<table>
+<tr><th style="width:34%">Resource</th><th style="width:38%">Endpoints</th><th>Notes</th></tr>
+<tr><td>Households &amp; members</td><td><code>POST /households</code>, <code>GET/PATCH /households/:id</code>, <code>POST /households/:id/invitations</code>, <code>POST /invitations/:token/accept</code></td><td>Owner-only: delete household, transfer ownership</td></tr>
+<tr><td>Tasks</td><td><code>GET/POST /task-lists</code>, <code>GET/POST /tasks</code>, <code>PATCH /tasks/:id</code>, <code>POST /tasks/:id/complete</code>, <code>POST /tasks/:id/reorder</code></td><td>Complete spawns next occurrence if recurring</td></tr>
+<tr><td>Calendar</td><td><code>GET/POST /events</code>, <code>GET /events?from&amp;to</code>, <code>PATCH/DELETE /events/:id</code> (+ <code>?scope=this|following|all</code>), <code>POST /events/:id/rsvp</code></td><td>Range query is the primary read; expansion server-side</td></tr>
+<tr><td>Finance</td><td><code>GET/POST /accounts</code>, <code>GET/POST /transactions</code>, <code>POST /transactions/import</code>, <code>GET/POST /budgets</code>, <code>GET /finance/dashboard</code>, <code>GET/POST /goals</code>, <code>GET/POST /recurring</code></td><td>Dashboard returns all PRD metrics in one payload</td></tr>
+<tr><td>Inventory</td><td><code>GET/POST /items</code>, <code>POST /items/scan</code> (barcode), <code>PATCH /stock/:itemId</code> (adjust), <code>GET/POST /shopping-lists</code>, <code>POST /shopping-lists/:id/items</code>, <code>POST /shopping-items/:id/check</code></td><td>Checking a shopping item increments stock atomically</td></tr>
+<tr><td>Fitness</td><td><code>POST /fitness/samples:batch</code>, <code>GET /fitness/summary</code>, <code>GET/POST /fitness/goals</code>, <code>GET/POST /challenges</code></td><td>Batch ingest is idempotent per <code>(source, external_id)</code></td></tr>
+<tr><td>Platform</td><td><code>GET /dashboard</code>, <code>GET /search?q=</code>, <code>GET /notifications</code>, <code>POST /devices</code> (push token), <code>GET /export</code>, <code>DELETE /me</code></td><td>Export is async; returns a job id</td></tr>
+</table>
+</div>
+<div class="page">
+<h3>5.3 Example — create transaction</h3>
+<pre>POST /v1/transactions        Idempotency-Key: 9f1c…   If-Match: -
+{ "account_id":"…", "type":"expense", "amount_minor":4599, "currency":"USD",
+  "category_id":"…", "merchant":"Market", "occurred_at":"2026-10-20",
+  "splits":[{ "category_id":"…", "amount_minor":4599 }] }
+→ 201 { "id":"…", "version":1, "balance_after_minor": 182340, … }
+→ 422 { "code":"split_sum_mismatch", "detail":"Splits must sum to amount." }</pre>
+<h3>5.4 Real-time API (WebSocket protocol)</h3>
+<ul>
+<li><b>Connect:</b> <code>wss://api…/v1/realtime</code> with the access token in the first message (never in the URL, so it cannot leak into logs). Server replies <code>ready</code> with the connection's household subscriptions.</li>
+<li><b>Messages:</b> server → client: <code>entity.changed</code> (envelope in Section 8.1), <code>presence.updated</code>, <code>ping</code>. Client → server: <code>subscribe</code>, <code>unsubscribe</code>, <code>pong</code>. Clients never write data over the socket — all writes stay on REST, so validation, idempotency, and audit apply uniformly.</li>
+<li><b>Ordering:</b> events carry a per-household monotonic sequence; a gap triggers the resync flow (Section 8.1) rather than silent divergence.</li>
+</ul>
+<h3>5.5 Versioning, deprecation &amp; client compatibility</h3>
+<ul>
+<li>Additive changes (new optional fields, new endpoints) ship inside <code>/v1</code>; the web client and API deploy together, and any future native app must tolerate one-version-old responses for 90 days after a breaking change is announced.</li>
+<li>Deprecated fields are marked in OpenAPI, logged when consumed, and removed only in a new major version. Sunset responses carry <code>Sunset</code> and <code>Deprecation</code> headers.</li>
+<li>File uploads never traverse the API: the client requests a pre-signed URL (<code>POST /attachments:presign</code>), uploads directly to object storage, then confirms; the API records metadata only after the AV scan passes.</li>
+</ul>
+<div class="footer"><span>Tandem — Technical Design Document v1.0</span><span>Confidential — Internal</span></div>
+</div>
+
+<div class="page">
+<h2>6. Module designs</h2>
+<h3>6.1 Tasks</h3>
+<ul>
+<li><b>Recurrence:</b> RFC 5545 RRULE stored verbatim; a materialised <code>next_due_at</code> is maintained for querying. Completing a recurring task creates the next instance and a <code>task_completions</code> row (powers streaks/history). Editing a series follows the same <code>this | following | all</code> scope model as calendar events.</li>
+<li><b>Ordering:</b> fractional <code>position</code> values allow drag-reorder with a single-row update; rebalancing job runs when precision is exhausted.</li>
+<li><b>Views are queries, not data:</b> Today / This Week / Overdue / By Assignee are parameterised list queries over <code>(household_id, due_at, status)</code>.</li>
+<li><b>Reminders:</b> on create/update, a delayed job is (re)scheduled in BullMQ at <code>due_at − offset</code>; job payload carries only IDs, state is re-read at fire time (a completed task never notifies).</li>
+</ul>
+<h3>6.2 Calendar</h3>
+<ul>
+<li><b>Storage:</b> recurring events store one master row with RRULE + EXDATEs; occurrences are expanded server-side for the requested range (max window 13 months per query) — never materialised indefinitely.</li>
+<li><b>Timezones:</b> timed events store UTC instants + the event's original IANA timezone so DST transitions render correctly for travelling partners; all-day events store <code>date</code> ranges.</li>
+<li><b>External sync:</b> two-way sync with Google / Microsoft calendars via the adapter layer (Section 9). Sync uses provider change tokens/webhooks, maps external IDs in <code>external_calendar_links</code>, and resolves conflicts last-write-wins with the pre-conflict version kept in audit log and surfaced if both sides changed within 5 minutes.</li>
+<li><b>Availability:</b> free/busy is computed from expanded occurrences; no separate availability store.</li>
+</ul>
+<h3>6.3 Finance (metrics engine)</h3>
+<p>All PRD metrics are SQL aggregations over <code>transactions</code>, cached per household/period in Redis (TTL 15 min, invalidated on any transaction write in that household):</p>
+<table>
+<tr><th style="width:30%">Metric</th><th>Computation</th></tr>
+<tr><td>Income / Spend / Net</td><td>Signed sums by type for the period, transfers excluded from both sides</td></tr>
+<tr><td>Savings rate</td><td><code>(income − spend) / income</code>; returns <code>null</code> (rendered “—”) when income is 0 — never divide by zero</td></tr>
+<tr><td>Budget burn &amp; projected overspend</td><td><code>spent / budget</code> and <code>spent / days_elapsed × days_in_period</code>; alerts fire on threshold crossing events only (no repeat spam — one alert per threshold per period)</td></tr>
+<tr><td>Fixed vs variable, top categories/merchants</td><td>Category <code>is_fixed</code> flag; <code>GROUP BY</code> with period snapshot for closed months</td></tr>
+<tr><td>Goal progress &amp; required/month</td><td><code>current / target</code>; required = <code>(target − current) / months_remaining</code>, recomputed on contribution</td></tr>
+<tr><td>Net worth trend</td><td>Monthly snapshot job: sum of account balances (assets − loans) stored in <code>net_worth_snapshots</code></td></tr>
+</table>
+<div class="footer"><span>Tandem — Technical Design Document v1.0</span><span>Confidential — Internal</span></div>
+</div>
+
+<div class="page">
+<h2>6. Module designs (continued)</h2>
+<h3>6.4 Inventory &amp; shopping</h3>
+<ul>
+<li><b>Stock adjustments are a ledger:</b> every change writes a <code>stock_movements</code> row (<code>delta, reason: purchase|use|waste|adjust, actor</code>); <code>stock_levels.quantity</code> is the cached sum. This makes “where did it go?” answerable and undo trivial.</li>
+<li><b>Low-stock rule:</b> after any movement, if <code>quantity &lt;= reorder_threshold</code>, emit <code>stock.low</code> → auto-add to the default shopping list (once, deduplicated by open shopping item) + optional notification.</li>
+<li><b>Shopping check-off loop:</b> checking a shopping item opens a quantity prompt (default: requested qty), writes a purchase movement, and — if the item is linked to a finance category — offers a one-tap expense pre-filled from the store/amount fields. The finance write only happens on explicit confirm.</li>
+<li><b>Barcode:</b> <code>POST /items/scan</code> looks up the household's own items first, then the cached <code>products</code> table, then the external product API (Section 9). Unknown barcodes create a stub the user names once; the result is cached for everyone (product catalogue data only — no household data is shared).</li>
+<li><b>Expiry:</b> <code>expires_on date</code> on stock batches where relevant; a daily job emits <code>stock.expiring</code> at 3 days and 0 days.</li>
+<li><b>Home inventory valuation:</b> purchase price + date on asset-class items; total insured-value report is a simple sum with a CSV/PDF export — no depreciation model in MVP.</li>
+</ul>
+<h3>6.5 Fitness (MVP-Lite)</h3>
+<ul>
+<li><b>Ingest:</b> manual entries and device sync write <code>metric_samples</code> (<code>steps, active_minutes, workouts, weight, sleep</code>). Batch endpoint dedupes on <code>(user_id, source, external_id)</code>; overlapping sources are priority-ordered (device &gt; phone &gt; manual) to avoid double-counted steps.</li>
+<li><b>Privacy is per-user, not per-household:</b> samples belong to a user; household aggregation only includes users whose <code>module_visibility</code> for fitness is <code>shared</code>. Challenges read aggregated totals, never raw samples of another user.</li>
+<li><b>Goals &amp; challenges:</b> progress is a windowed sum over samples; challenge standings are computed on read for small groups (household-scale, no pre-aggregation needed). Streaks count days meeting the daily target in the user's own timezone.</li>
+<li><b>Encouragement events:</b> goal met / challenge lead change / partner PR emit <code>fitness.milestone</code> → notification with a one-tap reaction. No public feeds, no leaderboards beyond the household.</li>
+</ul>
+<h3>6.6 Dashboard &amp; search</h3>
+<p>The home dashboard is a read-model endpoint (<code>GET /dashboard</code>) that fans out to module query services server-side and returns one payload with per-widget freshness timestamps, so a slow finance aggregation never blocks tasks. Global search queries each module's <code>tsvector</code> index with the same RLS context and merges ranked results; it never searches modules set to private by another member.</p>
+<div class="warn"><b>Consistency rule across modules:</b> anything that moves money or stock is transactional and ledger-backed; anything that is a view (dashboard, reports, standings) is derived and rebuildable. If a derived number and its ledger disagree, the ledger wins and the derived value is recomputed.</div>
+<div class="footer"><span>Tandem — Technical Design Document v1.0</span><span>Confidential — Internal</span></div>
+</div>
+
+<div class="page">
+<h2>6. Module designs — key flows</h2>
+<h3>6.7 Sequence: recurring bill → reminder → payment recorded</h3>
+<ol>
+<li><code>recurring_schedules.next_run_at</code> is scanned by a minutely dispatcher job; due schedules create a draft transaction (status <code>scheduled</code>) and a task (“Pay electricity bill”) if the template requests one.</li>
+<li>Reminder jobs fire per the member's notification preferences; the bill appears in Cash-Flow Forecast (PRD 5.3) from the schedule, not from history.</li>
+<li>On the due date the draft becomes payable; one tap confirms it into a posted transaction (amount editable), which updates budgets and the forecast atomically.</li>
+<li>If unconfirmed after 3 days, a single escalation reminder is sent; the schedule's next occurrence is generated regardless, so a missed payment never blocks the series.</li>
+</ol>
+<h3>6.8 Sequence: household creation &amp; partner invite</h3>
+<ol>
+<li><code>POST /households</code> creates the household, owner membership, default lists/calendars/categories from seeds, and a <code>household.created</code> audit entry — one DB transaction.</li>
+<li>Invite creates a hashed single-use token (raw token only in the emailed link), 7-day expiry. Accepting requires an authenticated account whose email matches the invite, or an explicit owner override.</li>
+<li>On accept, membership is activated, the new member gets default notification preferences, and a WebSocket <code>member.joined</code> event refreshes all clients.</li>
+<li>Leaving a household requires the leaver to export or abandon their private-module data; owners must transfer ownership first. Household deletion is owner-only, soft-deletes everything, and hard-purges after 30 days with a final confirmation email.</li>
+</ol>
+<h3>6.9 Offline &amp; conflict behaviour (PWA)</h3>
+<table>
+<tr><th style="width:28%">Case</th><th>Behaviour</th></tr>
+<tr><td>Reads offline</td><td>Last-synced cache (IndexedDB) served with a visible “offline / last synced” indicator</td></tr>
+<tr><td>Writes offline</td><td>Queued locally with client IDs; replayed in order with idempotency keys on reconnect</td></tr>
+<tr><td>Same task edited by both partners offline</td><td>Server version wins for scalar fields; both versions preserved in audit log and the loser is shown a “partner edited this” notice — never a silent overwrite of finance records (those return 409 for manual resolution)</td></tr>
+<tr><td>Stock adjusted by both</td><td>Movements are additive ledger entries, so both apply; quantity is the sum — no conflict possible</td></tr>
+<tr><td>Transaction edited vs deleted concurrently</td><td>Delete wins only if the edit's version is stale; otherwise 409 with both states shown</td></tr>
+</table>
+<div class="footer"><span>Tandem — Technical Design Document v1.0</span><span>Confidential — Internal</span></div>
+</div>
+
+<div class="page">
+<h2>7. Authentication, security &amp; privacy</h2>
+<h3>7.1 Authentication &amp; session design</h3>
+<ul>
+<li>OIDC/OAuth 2.1 via a managed identity provider: email+password (with breached-password screening), Google and Apple social login, and passkeys (WebAuthn) where the IdP supports them. The app never stores passwords.</li>
+<li>Access token: JWT, 15 minutes, claims <code>sub, household_ids</code> (IDs only, no PII). Refresh token: opaque, rotating, reuse detection revokes the whole token family.</li>
+<li>MFA: TOTP/push MFA available to all, <b>required</b> to view connected-account balances, export finance data, or delete a household.</li>
+<li>Sessions screen lists devices with last-active time; “sign out everywhere” revokes all refresh families and WebSocket connections.</li>
+</ul>
+<h3>7.2 Authorisation model</h3>
+<table>
+<tr><th style="width:22%">Layer</th><th>Mechanism</th></tr>
+<tr><td>Tenant isolation</td><td>PostgreSQL RLS on <code>household_id</code> (defence layer 1)</td></tr>
+<tr><td>Membership</td><td>API middleware: user must hold an active membership in the requested household (layer 2)</td></tr>
+<tr><td>Role</td><td>Owner/Admin/Member/Child/Guest capability matrix (PRD 5.7) enforced per endpoint (layer 3)</td></tr>
+<tr><td>Module privacy</td><td><code>module_visibility</code> check for private finance/fitness data (layer 4)</td></tr>
+</table>
+<p>Authorisation tests are written as a matrix: every endpoint × every role × own/other household, run in CI. A new endpoint without matrix tests fails review.</p>
+</div>
+<div class="page">
+<h3>7.3 Data protection</h3>
+<ul>
+<li><b>In transit:</b> TLS 1.2+ everywhere, HSTS, secure cookies, certificate pinning in any future native wrapper.</li>
+<li><b>At rest:</b> managed-disk/KMS encryption for DB, Redis, and object storage; field-level encryption (envelope, per-household key) for bank external IDs and any future health identifiers.</li>
+<li><b>Secrets:</b> in a managed secret store, injected at runtime; never in code, images, or logs. Log scrubbing for tokens, amounts in URLs, and email bodies.</li>
+<li><b>Uploads:</b> pre-signed S3 uploads, AV scan before <code>scan_status=clean</code>, images re-encoded server-side (strips EXIF location by default).</li>
+<li><b>AppSec:</b> parameterised queries only, output encoding, CSP, CORS allow-list, dependency scanning (Dependabot/Renovate), SAST + DAST in CI, OWASP ASVS L2 checklist per release.</li>
+</ul>
+<h3>7.4 Privacy &amp; compliance posture</h3>
+<ul>
+<li>Data export (JSON + CSV, per PRD NFR) generated asynchronously, delivered via a 48-hour signed link, and audit-logged. Account deletion anonymises audit rows and hard-deletes content within 30 days.</li>
+<li>Fitness/health data is treated as sensitive: explicit consent on first sync, per-user visibility defaulting to shared-with-household only after opt-in, and never used for advertising or sold — stated in the privacy policy.</li>
+<li>Bank aggregation (when enabled) uses a regulated aggregator; Tandem stores tokens and transactions, never bank credentials. Design anticipates GDPR/CCPA-style rights (access, rectification, erasure, portability) regardless of launch market.</li>
+<li>Children's accounts (if enabled) are view/task-limited, cannot see finance detail, and require an owner to create them.</li>
+</ul>
+<h3>7.5 Threat model — top threats and controls</h3>
+<table>
+<tr><th style="width:30%">Threat</th><th>Primary controls</th></tr>
+<tr><td>Partner / ex-partner account misuse</td><td>Per-user credentials (never shared logins), session list + revoke, step-up auth for export/delete, audit log visible to owners</td></tr>
+<tr><td>Credential stuffing / brute force</td><td>Managed IdP rate limits, breached-password screening, MFA, passkeys</td></tr>
+<tr><td>Cross-tenant access via crafted IDs</td><td>RLS + membership checks, UUIDs (unguessable), authorisation-matrix tests, 404 (not 403) for other households' resources</td></tr>
+<tr><td>Malicious file upload</td><td>Pre-signed uploads, AV scan, server-side image re-encode, content-type allow-list, isolated bucket</td></tr>
+<tr><td>Insider / operator access to finance data</td><td>Least-privilege IAM, no standing prod DB access (break-glass with audit), hashed household IDs in logs</td></tr>
+<tr><td>Provider token theft</td><td>Field-level encryption, secret-store storage, short-lived provider sessions, rotation runbook</td></tr>
+</table>
+<div class="footer"><span>Tandem — Technical Design Document v1.0</span><span>Confidential — Internal</span></div>
+</div>
+
+<div class="page">
+<h2>8. Real-time sync, notifications &amp; background jobs</h2>
+<h3>8.1 Real-time sync</h3>
+<ul>
+<li>WebSocket endpoint <code>GET /v1/realtime</code> (Socket.IO or native WS with a thin protocol). Clients subscribe per household after auth; the server joins them to a Redis pub/sub channel <code>household:{id}</code>.</li>
+<li>Event envelope: <code>{event_id, type, household_id, entity, entity_id, version, actor_id, at}</code>. Payloads carry IDs and versions, not full records — clients refetch (or patch from the REST response they already have), which keeps sync consistent with permissions and visibility.</li>
+<li>Heartbeat every 25 s; automatic reconnect with backoff; on reconnect the client sends last-seen <code>event_id</code> and receives a “resync required” flag if the gap exceeds the in-memory buffer, triggering a normal REST refresh.</li>
+<li>Presence (who is online / viewing a list) is ephemeral in Redis with 60 s TTL — never persisted.</li>
+</ul>
+<h3>8.2 Notification service</h3>
+<table>
+<tr><th style="width:24%">Concern</th><th>Design</th></tr>
+<tr><td>Channels</td><td>Push (FCM/APNs), email (SES), in-app inbox — one service, one template set, per-user channel preferences + quiet hours (household timezone)</td></tr>
+<tr><td>Triggers</td><td>Domain events only: <code>task.assigned, task.due, event.reminder, budget.threshold, bill.due, stock.low, stock.expiring, fitness.milestone, member.joined</code></td></tr>
+<tr><td>Anti-spam</td><td>Per-type dedupe window, threshold alerts fire once per crossing, daily digest option batches low-priority items at 08:00 local</td></tr>
+<tr><td>Reliability</td><td>Outbox pattern: notification intent is written in the same DB transaction as the domain change, then relayed — no lost alerts on a crash between write and send</td></tr>
+</table>
+<h3>8.3 Background jobs (BullMQ queues)</h3>
+<table>
+<tr><th style="width:26%">Queue</th><th>Jobs</th></tr>
+<tr><td><code>reminders</code></td><td>Task/event/bill reminders (delayed jobs, re-read state at fire time)</td></tr>
+<tr><td><code>recurring</code></td><td>Minutely dispatcher: spawn recurring tasks, bills, standing transactions</td></tr>
+<tr><td><code>imports</code></td><td>CSV parsing, aggregator sync, de-duplication review queue</td></tr>
+<tr><td><code>metrics</code></td><td>Nightly net-worth snapshot, budget-period close, cache reconciliation</td></tr>
+<tr><td><code>sync</code></td><td>External calendar sync, fitness provider polling/webhook processing</td></tr>
+<tr><td><code>housekeeping</code></td><td>Expiry scans, soft-delete purge, export generation, token cleanup</td></tr>
+</table>
+<p class="small">All jobs are idempotent, carry a correlation ID, retry with exponential backoff (max 5), and land in a dead-letter queue with an operator alert after exhaustion. Cron-style jobs use a Redis lock so only one worker instance runs them.</p>
+<div class="footer"><span>Tandem — Technical Design Document v1.0</span><span>Confidential — Internal</span></div>
+</div>
+
+<div class="page">
+<h2>9. Integrations &amp; future home automation</h2>
+<h3>9.1 Integration architecture</h3>
+<p>Every external system sits behind an <b>adapter interface</b> owned by Tandem (ports-and-adapters). Adapters translate provider payloads into Tandem domain objects, store the raw payload (encrypted, 90 days) for reprocessing, respect provider rate limits with token-bucket throttling, and surface a per-connection health status to the user (“Bank sync delayed”). No module code imports a provider SDK directly.</p>
+<table>
+<tr><th style="width:24%">Integration</th><th style="width:30%">Interface / provider pattern</th><th>MVP stance</th></tr>
+<tr><td>Bank / card aggregation</td><td><code>AccountAggregator</code> — Plaid (US) / equivalent regional provider; webhooks → <code>imports</code> queue</td><td>Phase 2; CSV import is the MVP path. Schema already carries <code>external_id</code></td></tr>
+<tr><td>Calendars</td><td><code>CalendarSync</code> — Google Calendar API, Microsoft Graph; change tokens + push channels</td><td>Phase 2 (one provider first, Google)</td></tr>
+<tr><td>Barcode / product data</td><td><code>ProductCatalogue</code> — Open Food Facts-style API + local cache</td><td>MVP: lookup + cache; graceful manual fallback</td></tr>
+<tr><td>Fitness</td><td><code>HealthSource</code> — Apple HealthKit &amp; Health Connect (via mobile wrapper), Fitbit/Garmin web APIs</td><td>MVP-Lite: manual + one device path; web APIs in Phase 2</td></tr>
+<tr><td>Files / receipts OCR</td><td><code>DocumentText</code> — managed OCR (e.g., Textract) behind interface</td><td>Phase 2: receipt total/merchant extraction into a draft expense</td></tr>
+</table>
+<h3>9.2 Home automation — extension design (Phase 3, reserved now)</h3>
+<ul>
+<li><b>New module, same spine:</b> <code>devices, device_states, automations, scenes</code> tables with <code>household_id</code>; device commands flow through the existing event bus and audit log, so “who opened the garage at 23:14” is answerable from day one of the feature.</li>
+<li><b>Local-first control:</b> a household hub/gateway (or the mobile app on the home network) speaks Matter/Thread and HomeKit locally; the cloud relays commands only when remote, and automations that are safety-relevant (locks, garage) must be executable locally if the internet is down.</li>
+<li><b>Safety gates by design:</b> actuation endpoints require step-up authentication for locks/garage doors, enforce per-device capability allow-lists, rate-limit commands, and default to <i>notify-both-partners</i> for security devices. Read-only telemetry (temperature, energy) ships before any actuation.</li>
+<li><b>Vendor neutrality:</b> <code>DeviceProvider</code> adapters (Matter, HomeKit, vendor clouds such as SmartThings) map to a common capability model (<code>on_off, dim, lock, open_close, temperature</code>) — Tandem never models a brand's proprietary object tree.</li>
+<li><b>Why this is only a reservation in MVP:</b> no device tables ship in MVP migrations; what ships is the event bus, audit log, and module pattern that make the addition incremental rather than architectural.</li>
+</ul>
+<div class="footer"><span>Tandem — Technical Design Document v1.0</span><span>Confidential — Internal</span></div>
+</div>
+
+<div class="page">
+<h2>10. Infrastructure, DevOps &amp; observability</h2>
+<h3>10.1 Environments &amp; deployment</h3>
+<table>
+<tr><th style="width:20%">Environment</th><th>Purpose</th><th>Data</th></tr>
+<tr><td><code>dev</code></td><td>Per-developer / ephemeral PR previews</td><td>Seeded synthetic households only</td></tr>
+<tr><td><code>staging</code></td><td>Release candidate, integration testing with provider sandboxes</td><td>Synthetic + anonymised fixtures; never production copies</td></tr>
+<tr><td><code>prod</code></td><td>Live service, single region at MVP (ADR-004)</td><td>Real data, PITR backups, cross-AZ replication</td></tr>
+</table>
+<ul>
+<li><b>Topology (prod):</b> CDN + WAF → ALB → ECS Fargate services (<code>api</code>, <code>worker</code>, <code>web</code>) across 2+ AZs; RDS PostgreSQL (Multi-AZ) + read replica for reports; ElastiCache Redis; S3 + CloudFront for uploads/exports.</li>
+<li><b>IaC:</b> all infrastructure in Terraform modules (<code>network, data, app, observability</code>); state in a locked remote backend; <code>terraform plan</code> is a required PR check for infra changes.</li>
+<li><b>CI/CD:</b> PR → lint, typecheck, unit tests, authorisation-matrix tests, migration check → merge to main → build immutable container images → deploy to staging → automated smoke + contract tests → manual approval → blue/green deploy to prod with automatic rollback on error-budget burn or failed health checks.</li>
+<li><b>Feature flags:</b> server-side flags (own table or managed service) gate every Phase 2/3 feature and any risky migration; flags are per-household capable for beta cohorts.</li>
+<li><b>Release discipline:</b> semantic versioning for the API image, DB migrations forward-only in prod, changelog per release, deploy freeze during the first 48 h after a finance-logic change unless hotfixing.</li>
+</ul>
+<h3>10.2 Observability &amp; operations</h3>
+<ul>
+<li><b>Signals:</b> OpenTelemetry traces (API → DB → queue), RED metrics per endpoint, structured JSON logs with <code>correlation_id, household_id (hashed), user_id</code>; finance payloads and health samples are never logged.</li>
+<li><b>Dashboards:</b> SLO dashboard (availability, p95 latency, sync freshness), business dashboard (signups, active households, import success), queue-depth and job-failure board.</li>
+<li><b>Alerting:</b> page on SLO burn (fast-burn 1 h), DB connection saturation, dead-letter growth, or balance-reconciliation mismatch; ticket (not page) on slow-query growth and provider-sync degradation.</li>
+<li><b>Backups &amp; DR:</b> automated snapshots + WAL PITR (RPO ≤ 1 h), monthly restore test into an isolated account, documented runbooks: DB failover, bad deploy rollback, provider outage, credential rotation, data-deletion request.</li>
+<li><b>Cost guardrails:</b> per-environment budgets with alerts at 50/80/100%, S3 lifecycle rules (exports expire in 7 days), and a monthly cost review — MVP infra is sized for the design point in Section 1, not for hypothetical scale.</li>
+</ul>
+<div class="footer"><span>Tandem — Technical Design Document v1.0</span><span>Confidential — Internal</span></div>
+</div>
+
+<div class="page">
+<h2>11. Testing, risks, ADRs &amp; delivery roadmap</h2>
+<h3>11.1 Test strategy</h3>
+<table>
+<tr><th style="width:22%">Layer</th><th>Scope</th></tr>
+<tr><td>Unit</td><td>Money maths, RRULE expansion, budget projections, stock ledger — property-based tests for sums/invariants (splits sum, ledger balance)</td></tr>
+<tr><td>Integration</td><td>API + real PostgreSQL/Redis in CI containers; RLS isolation tests (a second household can never read the first's rows — tested at SQL level, not just API level)</td></tr>
+<tr><td>Contract</td><td>OpenAPI snapshot tests; provider adapters tested against recorded/sandbox payloads</td></tr>
+<tr><td>End-to-end</td><td>Playwright: invite flow, task loop, expense→budget update, shopping→stock loop, offline queue replay</td></tr>
+<tr><td>Non-functional</td><td>Load test at 3x design point, Lighthouse CI (LCP &lt; 2.5 s), axe accessibility, restore drill, pre-launch pen-test</td></tr>
+</table>
+<h3>11.2 Top technical risks</h3>
+<table>
+<tr><th style="width:30%">Risk</th><th>Mitigation</th></tr>
+<tr><td>Cross-household data leak</td><td>RLS + membership + role layers; SQL-level isolation tests; pen-test gate</td></tr>
+<tr><td>Money rounding / split errors</td><td>Integer minor units, DB trigger on split sums, property tests, nightly reconciliation</td></tr>
+<tr><td>Recurrence / DST bugs</td><td>Battle-tested RRULE library, timezone-pinned test suite across DST boundaries, store original tz</td></tr>
+<tr><td>Import duplicates erode trust</td><td>Idempotent keys, fuzzy-match review queue, never silent merges</td></tr>
+<tr><td>Provider (bank/health) delays or policy changes</td><td>Adapter isolation, manual/CSV fallback always available, health status surfaced to users</td></tr>
+<tr><td>Scope creep (fitness + automation in MVP)</td><td>Fitness capped at MVP-Lite; automation is design-reservation only (Section 9.2)</td></tr>
+</table>
+</div>
+<div class="page">
+<h3>11.3 Architecture Decision Records (summary)</h3>
+<table>
+<tr><th style="width:14%">ADR</th><th style="width:36%">Decision</th><th>Revisit when</th></tr>
+<tr><td>ADR-001</td><td>Modular monolith, one deployable API</td><td>A module needs independent scaling or team exceeds ~12 engineers</td></tr>
+<tr><td>ADR-002</td><td>PostgreSQL RLS as the tenancy enforcement layer</td><td>Never silently — requires a security review to change</td></tr>
+<tr><td>ADR-003</td><td>REST + OpenAPI; WebSocket for sync events (IDs only)</td><td>Client query diversity or offline needs outgrow REST</td></tr>
+<tr><td>ADR-004</td><td>Single-region deployment at MVP</td><td>Users in a second continent exceed 15% of actives, or a compliance need arises</td></tr>
+<tr><td>ADR-005</td><td>Integer minor units; derived balances; ledger-backed stock</td><td>Fixed — correctness invariant, not a preference</td></tr>
+<tr><td>ADR-006</td><td>Managed IdP; never store passwords or bank credentials</td><td>Fixed — security invariant</td></tr>
+</table>
+<h3>11.4 Delivery roadmap (estimates for a 3–4 person team)</h3>
+<table>
+<tr><th style="width:18%">Phase</th><th style="width:14%">Duration</th><th>Contents</th></tr>
+<tr><td>0 — Foundations</td><td>Weeks 1–2</td><td>Repo, CI/CD, Terraform skeleton, auth, tenancy + RLS, design system</td></tr>
+<tr><td>1 — Core MVP</td><td>Weeks 3–8</td><td>Households/invites, Tasks, Calendar, dashboard shell, real-time sync, notifications</td></tr>
+<tr><td>2 — Money &amp; Home</td><td>Weeks 9–12</td><td>Finance (manual + CSV), Inventory + shopping, Fitness MVP-Lite</td></tr>
+<tr><td>3 — Hardening &amp; launch</td><td>Weeks 13–14</td><td>Load/a11y/pen-test fixes, export/delete, beta (20–50 households), launch</td></tr>
+<tr><td>Post-MVP</td><td>Ongoing</td><td>Bank sync, external calendars, receipt OCR, full fitness, then home-automation telemetry (read-only) before actuation</td></tr>
+</table>
+</div>
+<div class="page">
+<h3>Appendix A — Environments, naming &amp; glossary</h3>
+<p class="small"><b>Naming:</b> tables are plural snake_case; API resources are plural kebab-case; events are <code>entity.action</code> past-tense nouns (e.g., <code>transaction.created</code>); queues are lowercase nouns. <b>Glossary:</b> <i>Household</i> — the tenant unit (a couple or family). <i>Member</i> — a user belonging to a household. <i>Ledger</i> — an append-only record (stock movements, audit) from which current state is derived. <i>Outbox</i> — the pattern of writing an event row in the same transaction as the data change, relayed asynchronously. <i>RLS</i> — PostgreSQL row-level security. <i>RRULE</i> — the iCalendar recurrence rule format (RFC 5545). <b>Open questions for review:</b> (1) NestJS vs Fastify — decide in Phase 0 by team preference; contracts here are unaffected. (2) Launch currency/region for payments law and aggregator choice. (3) Native wrapper timing — PWA-only at launch is assumed; revisit if HealthKit depth is required for Fitness GA.</p>
+<div class="footer"><span>Tandem — Technical Design Document v1.0</span><span>Confidential — Internal</span></div>
+</div>
+</body></html>

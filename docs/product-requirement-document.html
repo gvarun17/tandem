@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tandem - Product Requirement Document and Technical Design Document</title>
+<style>
+@page{size:A4;margin:0}
+*{box-sizing:border-box;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+body{margin:0;font-family:'Liberation Sans','Noto Sans',sans-serif;color:#1f2a2e;font-size:10pt;line-height:1.45;background:#fff}
+.page{min-height:297mm;padding:15mm 18mm 12mm 18mm;position:relative;break-after:page}
+.page:last-child{break-after:auto}
+h1,h2,h3{font-family:'Liberation Serif','Noto Serif',serif;color:#143c3a;margin:0}
+h2{font-size:20pt;line-height:1.15;border-bottom:2.5px solid #c96f4a;padding-bottom:6px;margin-bottom:10px}
+h3{font-size:11.5pt;margin:12px 0 5px 0;color:#175e57}
+p{margin:0 0 7px 0}
+ul,ol{margin:4px 0 8px 18px;padding:0}li{margin-bottom:3px}
+table{width:100%;border-collapse:collapse;font-size:8.8pt;margin:6px 0 10px 0}
+th{background:#143c3a;color:#fff;text-align:left;padding:5px 6px;font-weight:700}
+td{padding:5px 6px;border-bottom:1px solid #d9e2df;vertical-align:top}
+tr:nth-child(even) td{background:#f4f7f6}
+.small{font-size:8.8pt;color:#4a5d5a}
+.tag{display:inline-block;background:#e8f0ee;color:#175e57;border:1px solid #bcd3ce;border-radius:20px;padding:2px 8px;font-size:8.5pt;font-weight:700;margin-right:4px}
+.tag.o{background:#fbeee6;color:#8a3d1e;border-color:#eec9b3}
+.callout{background:#fdf3ec;border-left:4px solid #c96f4a;padding:9px 12px;margin:9px 0}
+.callout.teal{background:#edf4f2;border-left-color:#175e57}
+.kicker{font-size:9pt;letter-spacing:2px;text-transform:uppercase;color:#c96f4a;font-weight:700;margin-bottom:6px}
+.footer{position:absolute;bottom:10mm;left:18mm;right:18mm;font-size:8pt;color:#7a8a87;border-top:1px solid #d9e2df;padding-top:5px;display:flex;justify-content:space-between}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.card{border:1px solid #d9e2df;border-radius:8px;padding:10px 12px;break-inside:avoid}
+.card b{color:#143c3a}
+code{font-family:'Liberation Mono',monospace;font-size:8.6pt;background:#eef2f1;padding:1px 4px;border-radius:3px}
+pre{font-family:'Liberation Mono',monospace;font-size:8.2pt;background:#143c3a;color:#e8f4f1;padding:10px 12px;border-radius:8px;white-space:pre-wrap;line-height:1.4;margin:6px 0 10px 0}
+.arch{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:8px 0}
+.abox{border:1.5px solid #175e57;border-radius:8px;padding:8px;text-align:center;font-size:8.8pt;background:#edf4f2}
+.abox b{display:block;font-size:9.5pt}
+.abox.warm{border-color:#c96f4a;background:#fdf3ec}
+.cover{padding-top:24mm}
+.cover h1{font-size:36pt;line-height:1.05;color:#143c3a}
+.cover .sub{font-size:14pt;color:#175e57;line-height:1.4;margin-top:10px}
+.rule{width:64px;height:5px;background:#c96f4a;margin:16px 0}
+</style></head><body>
+
+<!-- PAGE 1 COVER -->
+<div class="page cover">
+<div class="kicker">Product pack &nbsp;|&nbsp; Web application &nbsp;|&nbsp; v1.0 - Draft for build</div>
+<h1>Tandem</h1>
+<p class="sub">One shared home base for a couple or family - to manage, organise, and schedule daily life, money, the home itself, and the long-term goals in between.</p>
+<div class="rule"></div>
+<h3 style="font-size:15pt">Product Requirement Document<br>+ Technical Design Document</h3>
+<p style="margin-top:12px">This pack contains both documents you asked for, bound together so product and engineering decisions stay in one place:</p>
+<div class="two" style="margin-top:8px">
+<div class="card"><b>Part I - PRD (pages 2-9)</b><p class="small" style="margin-top:4px">What to build and why: vision, personas, scope, module-by-module requirements, finance metrics, success criteria, and launch gates. Written so a designer or developer can build from it without guessing.</p></div>
+<div class="card"><b>Part II - TDD (pages 10-15)</b><p class="small" style="margin-top:4px">How to build it: recommended stack, system architecture, data model, APIs, security and privacy, testing, DevOps, and a phased build sequence with estimates.</p></div>
+</div>
+<table>
+<tr><th style="width:28%">Item</th><th>Detail</th></tr>
+<tr><td>Product name</td><td><b>Tandem</b> - confirmed product name. Trademark, domain, and branding checks to follow under this name.</td></tr>
+<tr><td>Platform (MVP)</td><td>Responsive web app (mobile-first, installable as a PWA). Native iOS/Android is a later decision - see page 14.</td></tr>
+<tr><td>Users</td><td>A household: 2 partners at launch, extensible to family members, older children, and limited guests.</td></tr>
+<tr><td>MVP modules</td><td>Tasks - Calendar - Finance - Inventory (groceries + home). Fitness follows as Phase 1.5.</td></tr>
+<tr><td>Future</td><td>Goal-linked planning, automations, and home automation (garage, lights) in Phase 3 - designed for, not built in MVP.</td></tr>
+<tr><td>Status</td><td>Draft v1.0 - 20 October 2026. Open decisions are listed on page 9 and page 15; they block slices, not the whole build.</td></tr>
+</table>
+<div class="callout"><b>Read this first:</b> If you only have 10 minutes, read page 2 (vision), page 6 (finance metrics), and pages 10 and 14 (architecture and build sequence). Everything else is the detail behind those three pages.</div>
+<p class="small">Tandem is the confirmed product name used throughout this pack. Every requirement uses "the product" where the name does not matter.</p>
+<div class="footer"><span>Tandem - PRD + TDD v1.0</span><span>Page 1 - Cover</span></div>
+</div>
+<!-- PAGE 2 VISION -->
+<div class="page">
+<div class="kicker">Part I - Product Requirement Document</div>
+<h2>1. The problem: a household runs on scattered apps and memory</h2>
+<p>A couple already runs a small organisation - chores, bills, appointments, groceries, savings goals, and the house itself. Today that work is split across a notes app, a chat thread, a personal calendar, a banking app neither partner fully sees, and memory. The result is predictable: duplicated purchases, missed renewals, "I thought you were paying that," and long-term goals that never get a weekly action attached to them.</p>
+<p><b>Vision.</b> Tandem is the household's single shared operating system: one place where both partners see the same tasks, the same calendar, the same money picture, and the same state of the home - and where every long-term goal breaks down into this week's tasks, budget, and calendar time.</p>
+<div class="two">
+<div>
+<h3>Who it is for</h3>
+<ul>
+<li><b>Primary:</b> a married or cohabiting couple sharing expenses, a home, and a calendar, on mixed devices.</li>
+<li><b>Secondary:</b> the wider family in the same home - parents, older children - with narrower, role-based access.</li>
+<li><b>Not for (MVP):</b> roommates splitting rent only, landlords, or multi-household property management.</li>
+</ul>
+<h3>Product principles</h3>
+<ol>
+<li><b>Shared by default, private by choice.</b> Household items are visible to both partners; any item can be marked personal.</li>
+<li><b>Capture in under 10 seconds.</b> Adding a task, expense, or grocery item must be faster than sending a chat message about it.</li>
+<li><b>Show the household, not just the person.</b> Every dashboard answers "how are <i>we</i> doing?" before "how am I doing?"</li>
+<li><b>No blame design.</b> Finance and fitness views compare against the plan, never partner against partner as a league table by default.</li>
+<li><b>Calm notifications.</b> Digest-first; interrupt only for time-critical items the user opted into.</li>
+</ol>
+</div>
+<div>
+<h3>Jobs to be done</h3>
+<table>
+<tr><th>When...</th><th>The couple wants to...</th></tr>
+<tr><td>Planning the week</td><td>See tasks, events, and money due in one view</td></tr>
+<tr><td>Something needs doing</td><td>Assign it, set a due date, and trust it will not be forgotten</td></tr>
+<tr><td>Money comes in / goes out</td><td>Know what is safe to spend and whether savings are on track</td></tr>
+<tr><td>Shopping or cooking</td><td>Know what is already at home before buying more</td></tr>
+<tr><td>Reviewing the month</td><td>See progress on goals without building a spreadsheet</td></tr>
+<tr><td>Life gets busy</td><td>Get a gentle nudge, not another noisy feed</td></tr>
+</table>
+<h3>Personas (summary)</h3>
+<p><b>The Organiser</b> - plans ahead, keeps lists, wants structure and a weekly review. <b>The Doer</b> - acts on clear, short lists; will not maintain a complex system. The product must satisfy the Organiser's depth while never punishing the Doer: sensible defaults, one-tap completion, and no mandatory fields beyond a title and a date where relevant.</p>
+</div>
+</div>
+<div class="callout teal"><b>Differentiation in one line:</b> Existing apps do one slice well (to-do, budgeting, or grocery lists). Tandem's value is the joins between them - a goal creates budget + tasks + calendar time; a low-stock grocery creates a shopping task; a bill is both a calendar event and a finance forecast.</div>
+<div class="footer"><span>Tandem - PRD</span><span>Page 2 - Vision, users, principles</span></div>
+</div>
+
+<!-- PAGE 3 SCOPE -->
+<div class="page">
+<div class="kicker">Part I - Product Requirement Document</div>
+<h2>2. Scope: a tight MVP, fitness next, automation later</h2>
+<table>
+<tr><th style="width:22%">Phase</th><th style="width:44%">Includes</th><th>Explicitly out</th></tr>
+<tr><td><span class="tag">MVP - v1.0</span></td><td>Household setup + invites; Tasks; Calendar; Finance core (accounts, transactions, budgets, bills, savings goals, dashboard); Inventory (groceries + home, shopping list); search; notifications + digest.</td><td>Native apps, bank auto-sync, payments, chat, social features.</td></tr>
+<tr><td><span class="tag">Phase 1.5 - v1.1</span></td><td><b>Fitness</b> (metrics, shared goals, encouragement); Goals v2 (milestones); CSV/bank import; receipt photos; two-way Google/Apple calendar sync.</td><td>In-app payments between partners (track settlements only).</td></tr>
+<tr><td><span class="tag o">Phase 2</span></td><td>Native mobile apps (if PWA limits bite); multi-currency polish; document vault; expanded guest/child roles; public API + integrations.</td><td>Marketplace, advertising, selling household data - permanently out.</td></tr>
+<tr><td><span class="tag o">Phase 3 - Future</span></td><td><b>Home automation:</b> device hub integrations (garage doors, lights, locks, thermostat) via Matter / Home Assistant-style bridges; automations ("when we leave, close garage"); device state on the home dashboard.</td><td>Building own hardware. Automation is integration-only and must degrade gracefully when a device is offline.</td></tr>
+</table>
+<h3>Release roadmap</h3>
+<table>
+<tr><th>Milestone</th><th>Outcome the couple can feel</th><th style="width:18%">Indicative timing*</th></tr>
+<tr><td>M1 - Foundations</td><td>Sign up, create a household, invite a partner, both see the same home screen.</td><td>Weeks 1-2</td></tr>
+<tr><td>M2 - Tasks + Calendar</td><td>The household runs its week in Tandem instead of chat + memory.</td><td>Weeks 3-5</td></tr>
+<tr><td>M3 - Finance</td><td>One money picture: balances, budgets, bills due, savings progress.</td><td>Weeks 5-8</td></tr>
+<tr><td>M4 - Inventory</td><td>No duplicate groceries; shopping list builds itself from low stock.</td><td>Weeks 8-10</td></tr>
+<tr><td>M5 - Polish + beta</td><td>Digest, search, onboarding, privacy hardening; private beta, 10-20 households.</td><td>Weeks 10-12</td></tr>
+<tr><td>M6 - Fitness (1.5)</td><td>Shared fitness goals and gentle encouragement, using manual + wearable data where available.</td><td>Post-launch</td></tr>
+</table>
+<p class="small">* Timings assume one small team building vertical slices. Planning aids, not commitments - see page 14 for the slice sequence.</p>
+<h3>Success metrics - how we will know it works</h3>
+<table>
+<tr><th style="width:26%">Metric</th><th style="width:38%">Definition</th><th>Target (first 90 days of beta)</th></tr>
+<tr><td>Household activation</td><td>Both partners accept the invite and each completes 3+ actions in week 1</td><td>60% of created households</td></tr>
+<tr><td>Weekly shared use</td><td>Households with actions from both partners in the same week</td><td>50% of activated households, week 8</td></tr>
+<tr><td>Task completion rate</td><td>Tasks completed / tasks due, per household per week</td><td>Trend up; baseline set in beta week 2</td></tr>
+<tr><td>Finance engagement</td><td>Households viewing the money dashboard 2+ times/week with budgets set</td><td>40% of activated households</td></tr>
+<tr><td>Retention</td><td>Households still active at day 30 / day 90</td><td>40% / 25% (consumer-app realistic bar)</td></tr>
+</table>
+<div class="footer"><span>Tandem - PRD</span><span>Page 3 - Scope, roadmap, success metrics</span></div>
+</div>
+<!-- PAGE 4 TASKS + CALENDAR -->
+<div class="page">
+<div class="kicker">Part I - Product Requirement Document</div>
+<h2>3. Tasks and Calendar: the household's week, in one view</h2>
+<h3>Module A - Tasks (daily, weekly, recurring)</h3>
+<p>Tasks are the atomic unit of household work. Every task has a title, an owner (one partner, both, or unassigned), a due date/time, a list, and a visibility (shared or personal). Everything else is optional, so capture stays fast.</p>
+<table>
+<tr><th style="width:24%">Requirement</th><th>Detail and rules</th></tr>
+<tr><td>Create / edit / complete</td><td>Quick-add from any screen (keyboard shortcut + floating button). Complete with one tap; completed tasks stay visible struck-through until end of day, then move to history.</td></tr>
+<tr><td>Views</td><td><b>Today</b> (due today + overdue), <b>This Week</b> (grouped by day), <b>Lists</b> (custom lists, e.g. Home, Kids, Admin), <b>Mine / Partner's / All</b> filter. Default home view is Today + This Week combined.</td></tr>
+<tr><td>Recurrence</td><td>Daily, weekly, monthly, custom interval, and "after completion" recurrence (next occurrence created only when the current one is done - for chores like changing filters). Support rotating assignee for shared chores.</td></tr>
+<tr><td>Assignment + nudges</td><td>Assigning a task notifies the assignee once. One gentle reminder before due time; overdue tasks roll into Today with an overdue marker - never silently deleted.</td></tr>
+<tr><td>Subtasks + notes</td><td>Up to 10 subtasks, free-text notes, optional link to a calendar event, a budget category, an inventory item, or a goal.</td></tr>
+<tr><td>Acceptance criteria</td><td>A task created by Partner A appears for Partner B within 5 seconds on a normal connection; recurring series can be edited for "this event only" or "this and following"; deleting a series requires confirmation.</td></tr>
+</table>
+<h3>Module B - Calendar</h3>
+<table>
+<tr><th style="width:24%">Requirement</th><th>Detail and rules</th></tr>
+<tr><td>Calendars</td><td>One <b>Household</b> calendar (both partners), plus a <b>Personal</b> calendar per user visible only to them. Events can be household or personal; personal events can optionally show as "Busy" (time blocked, no details) to the partner.</td></tr>
+<tr><td>Events</td><td>Title, start/end, all-day, location, notes, attendees (household members + free-text guests), reminders (multiple), recurrence with exceptions, colour by calendar/category.</td></tr>
+<tr><td>Views</td><td>Month, Week, Day, and Agenda. Agenda is the default on mobile. Tasks with due times appear on the calendar as toggleable overlay items - not as events - so the week reads as one plan.</td></tr>
+<tr><td>Joins with other modules</td><td>Bills appear as forecast markers on their due dates; birthdays/anniversaries are first-class recurring events with gift-task prompts (optional); fitness sessions and goal milestones can be placed as events.</td></tr>
+<tr><td>External sync</td><td>MVP: one-way import/subscribe (ICS) + export. Phase 1.5: two-way sync with Google Calendar and Apple Calendar, with a clear conflict rule (last edit wins, conflict shown, never silently overwritten).</td></tr>
+<tr><td>Acceptance criteria</td><td>Creating an event with a reminder fires that reminder within 1 minute of schedule across web push/email per user settings; timezone is stored per event and displayed correctly when a partner travels.</td></tr>
+</table>
+<div class="callout"><b>Design rule:</b> One combined "Week" screen - calendar on top, tasks beneath each day - is the signature view. If a feature does not make it more useful, it is not MVP.</div>
+<div class="footer"><span>Tandem - PRD</span><span>Page 4 - Tasks and Calendar</span></div>
+</div>
+
+<!-- PAGE 5 FINANCE 1 -->
+<div class="page">
+<div class="kicker">Part I - Product Requirement Document</div>
+<h2>4. Finance: one money picture both partners trust</h2>
+<p>Finance is a tracking and planning tool in MVP - it records and explains money, it does not move money. Manual entry must be excellent first; bank import (CSV in MVP, aggregation later) reduces the burden without becoming a dependency.</p>
+<h3>Core objects</h3>
+<table>
+<tr><th style="width:22%">Object</th><th>Fields and rules</th></tr>
+<tr><td>Accounts</td><td>Name, type (current/checking, savings, credit card, cash, loan, investment - tracking only), owner (joint / Partner A / Partner B), currency, opening + current balance, optional credit limit and statement/due dates for cards.</td></tr>
+<tr><td>Transactions</td><td>Amount, date, payee/description, category, account, entered-by, type (income, expense, transfer), split flag (shared / personal / split %), receipt photo (1.5), note. Transfers between own accounts never count as income or expense.</td></tr>
+<tr><td>Categories</td><td>Starter set (Groceries, Dining, Utilities, Rent/Mortgage, Transport, Health, Home, Fun, Kids, Other) - fully editable, with subcategories. Every transaction has exactly one category.</td></tr>
+<tr><td>Budgets</td><td>Per category, per month (weekly view derived). Set as a household amount; optional per-partner personal budgets for personal categories. Rollover on/off per budget.</td></tr>
+<tr><td>Bills + recurring</td><td>Recurring income/expenses with frequency, next due date, account, and auto-create toggle. Bills feed the calendar and the cash-flow forecast.</td></tr>
+<tr><td>Savings goals</td><td>Name, target amount, target date, linked account(s), contributions (manual or auto-scheduled as recurring transfers), priority. Progress shown as amount + % + required monthly pace.</td></tr>
+<tr><td>Settlements</td><td>For split expenses, a running "who owes whom" balance with a one-tap "mark settled" - the app records the settlement; payment itself happens outside the app in MVP.</td></tr>
+</table>
+<h3>Entry experience - the make-or-break detail</h3>
+<ul>
+<li>Add expense in 3 fields or fewer: amount, category (suggested from history), account (defaults to last used). Date defaults to today; partner attribution defaults to shared.</li>
+<li>Quick-add from the home screen and from the Inventory shopping list (a bought item can become an expense in one tap).</li>
+<li>Duplicate detection on import and on rapid re-entry; every import is previewed and reversible as a batch.</li>
+<li>Both partners see new transactions in near-real time, with "added by" attribution - transparency without surveillance framing.</li>
+</ul>
+<div class="callout teal"><b>Trust rule:</b> Either partner can edit a shared transaction, but edits are kept in an activity history (who changed what, when). Nothing in finance is silently overwritten - that history is what makes a shared money tool feel safe.</div>
+<div class="footer"><span>Tandem - PRD</span><span>Page 5 - Finance: accounts, budgets, bills, goals</span></div>
+</div>
+<!-- PAGE 6 FINANCE METRICS -->
+<div class="page">
+<div class="kicker">Part I - Product Requirement Document</div>
+<h2>5. Finance metrics: the dashboard that answers "how are we doing?"</h2>
+<p>The money home screen shows a small, stable set of metrics - the same ones every week, so the couple learns to read them at a glance. Definitions below are normative: the TDD implements exactly these formulas.</p>
+<table>
+<tr><th style="width:24%">Metric</th><th style="width:42%">Definition</th><th>Why it matters</th></tr>
+<tr><td>Net position</td><td>Sum of all account balances minus loans/credit-card balances owed. Shown as one number + 6-month trend.</td><td>The household's headline health number.</td></tr>
+<tr><td>Safe to spend</td><td>Liquid balances - bills due before next payday - budget amounts reserved for the rest of the month.</td><td>Answers "can we afford this?" without mental maths.</td></tr>
+<tr><td>Income vs. spending</td><td>Total income and total expenses this month (transfers excluded), with the same period last month alongside.</td><td>Direction of travel, not just a snapshot.</td></tr>
+<tr><td>Savings rate</td><td>(Income - expenses) / income for the month, as a %. Also shown as a 3-month average to smooth noise.</td><td>The single habit metric most linked to long-term goals.</td></tr>
+<tr><td>Budget health</td><td>Per budget: spent, remaining, and pace status (on pace / watch / over) based on day-of-month vs. spend proportion.</td><td>Early warning, while there is still time to adjust.</td></tr>
+<tr><td>Cash-flow forecast</td><td>Projected balance for the next 30/60/90 days from scheduled bills, recurring income, and average discretionary spend.</td><td>Prevents the "big bill in a quiet month" surprise.</td></tr>
+<tr><td>Bills due (7 / 30 days)</td><td>List + total of bills due in the window, with the account each will draw from.</td><td>Pairs with the calendar forecast markers.</td></tr>
+<tr><td>Savings goal pace</td><td>Per goal: saved, % of target, months remaining, required monthly amount vs. actual average contribution.</td><td>Turns a wish into a monthly number.</td></tr>
+<tr><td>Category breakdown</td><td>Spend by category this month (bar/donut), tap to drill into transactions; top-3 movers vs. last month called out in words.</td><td>Shows where money actually went, in plain language.</td></tr>
+<tr><td>Settlement balance</td><td>Net amount one partner owes the other from split expenses, with history.</td><td>Keeps shared costs fair without a side spreadsheet.</td></tr>
+<tr><td>Fixed vs. flexible</td><td>Recurring/fixed spend as a share of income vs. discretionary spend share.</td><td>Shows how much room the household really has to adjust.</td></tr>
+</table>
+<h3>Reporting and review</h3>
+<ul>
+<li><b>Weekly digest (in-app + email/push, opt-in):</b> spent this week, budgets at risk, bills next week, one savings-goal update, tasks completed. One screen, no shaming language.</li>
+<li><b>Monthly review screen:</b> income vs. spending, savings rate, category movers, goals progress, and a prompt to adjust next month's budgets - designed as a 10-minute together ritual.</li>
+<li><b>Export:</b> transactions and budgets exportable as CSV at any time. The household's data is theirs; export is a feature, not a support ticket.</li>
+</ul>
+<p class="small"><b>Currency:</b> One primary household currency in MVP, with per-account currency stored and converted at a stored rate for display totals (rate source and date shown). Full multi-currency budgeting is Phase 2.</p>
+<div class="footer"><span>Tandem - PRD</span><span>Page 6 - Finance metrics and review</span></div>
+</div>
+
+<!-- PAGE 7 INVENTORY -->
+<div class="page">
+<div class="kicker">Part I - Product Requirement Document</div>
+<h2>6. Inventory: what is in the house, and what is about to run out</h2>
+<p>Inventory has two halves with different rhythms. <b>Groceries</b> move fast - quantities change weekly and the payoff is a shopping list that builds itself. <b>Home inventory</b> moves slowly - appliances, furniture, documents, warranties - and pays off when something breaks, gets insured, or needs replacing.</p>
+<div class="two">
+<div>
+<h3>Groceries and consumables</h3>
+<table>
+<tr><th>Requirement</th><th>Detail</th></tr>
+<tr><td>Item</td><td>Name, quantity + unit, location (pantry/fridge/freezer/bathroom), category, low-stock threshold, expiry date (optional), barcode (optional, Phase 1.5 scan)</td></tr>
+<tr><td>Stock actions</td><td>Add, use up (-1 / set quantity), restock. One-tap +/- on the item row; full edit only when needed.</td></tr>
+<tr><td>Low-stock rule</td><td>When quantity is at or below threshold, the item appears on the Shopping List automatically (once - no duplicates).</td></tr>
+<tr><td>Expiry view</td><td>"Use soon" list sorted by expiry; optional digest mention. No alarm-style notifications by default.</td></tr>
+<tr><td>Shopping List</td><td>Auto items + manually added items, grouped by store/aisle category, check-off in store, quantity, assigned shopper. Checking off in "shopping mode" restocks inventory and can create a finance expense in one tap.</td></tr>
+<tr><td>Staples</td><td>Mark an item a staple to keep it permanently threshold-tracked (milk, rice, detergent) vs. one-off items that disappear when used up.</td></tr>
+</table>
+</div>
+<div>
+<h3>Home inventory (everything else)</h3>
+<table>
+<tr><th>Requirement</th><th>Detail</th></tr>
+<tr><td>Item</td><td>Name, room/location, category, purchase date + price, serial number, warranty expiry, photo(s), receipt/document attach, notes (e.g. filter size, paint colour)</td></tr>
+<tr><td>Rooms</td><td>Kitchen, Living, Bedroom, Bathroom, Garage, Storage + custom rooms. Browse by room or search globally.</td></tr>
+<tr><td>Reminders</td><td>Warranty expiring, maintenance due (recurring task auto-created, e.g. HVAC filter), insurance review - all surface as tasks/calendar items, not a separate inbox.</td></tr>
+<tr><td>Value view</td><td>Total recorded value by room/category - useful for insurance. Exportable as PDF/CSV list.</td></tr>
+<tr><td>Loaned / stored</td><td>Status flag: in use, stored, loaned out (to whom), disposed/sold - so the list stays truthful over years.</td></tr>
+</table>
+<h3>Acceptance criteria (both halves)</h3>
+<ul>
+<li>Searching "batteries" finds the item, its room, and its quantity in under 2 seconds of typing.</li>
+<li>Buying a shopping-list item updates stock, removes it from the list, and (if chosen) logs the expense - in a single flow.</li>
+<li>Inventory is fully usable offline for viewing and stock changes, syncing on reconnect (see TDD sync rules).</li>
+</ul>
+</div>
+</div>
+<div class="callout"><b>Scope discipline:</b> MVP inventory is a trusted list, not a smart-kitchen platform. No recipe engine, no automatic ordering, and no image recognition in v1.0 - those are Phase 2 candidates only if beta households ask for them unprompted.</div>
+<div class="footer"><span>Tandem - PRD</span><span>Page 7 - Inventory: groceries and home</span></div>
+</div>
+<!-- PAGE 8 FITNESS + GOALS + CROSSCUTTING -->
+<div class="page">
+<div class="kicker">Part I - Product Requirement Document</div>
+<h2>7. Fitness, goals, and the layer that joins everything</h2>
+<h3>Module E - Fitness (Phase 1.5 - designed now, built after MVP)</h3>
+<p>Fitness is specified here so the data model and home screen reserve space for it, but it does not block the MVP launch. Its tone is the product in miniature: encouragement, never comparison-as-competition by default.</p>
+<table>
+<tr><th style="width:24%">Requirement</th><th>Detail</th></tr>
+<tr><td>Metrics tracked</td><td>Workouts (type, duration, date, who), steps, weight (personal by default, shareable by choice), sleep (manual or wearable-imported where available). Manual entry is the baseline; device import is an enhancement, never a requirement.</td></tr>
+<tr><td>Shared goals</td><td>Household or paired goals, e.g. "3 workouts each this week", "walk together twice a week", "10k steps/day streak - combined". Progress is shown as joint progress first, individual contribution second.</td></tr>
+<tr><td>Encouragement</td><td>One-tap kudos on a partner's completed workout or hit goal; streaks celebrated in the weekly digest. No public ranking, no weight league tables, no negative streak-shaming.</td></tr>
+<tr><td>Scheduling join</td><td>Fitness goals can generate calendar blocks and recurring tasks ("Tue/Thu 7am workout"), so intent becomes time, not just a chart.</td></tr>
+<tr><td>Privacy</td><td>Weight and health notes are personal by default. A partner sees only what the other explicitly shares. This default is not changeable by the other partner.</td></tr>
+</table>
+<h3>The Goals layer (spans all modules)</h3>
+<p>Long-term goals are what separate Tandem from a bundle of utilities. A Goal (e.g. "Save for a house deposit", "Get fit by June", "Renovate the kitchen") has a target, a date, an owner pair, and linked objects: a savings goal in Finance, milestones as Calendar events, and next actions as Tasks. The Goal screen shows one progress view assembled from those links - no duplicate data entry.</p>
+<ul>
+<li>MVP: goals exist as lightweight objects linking one savings goal + any tasks/events, with a manual progress note.</li>
+<li>Phase 1.5: milestones, fitness-goal links, and a quarterly review prompt.</li>
+</ul>
+<h3>Cross-cutting requirements</h3>
+<table>
+<tr><th style="width:24%">Area</th><th>Requirement</th></tr>
+<tr><td>Household + roles</td><td>Household is the tenant. Roles: Partner (full), Member (family - configurable modules), Child/Guest (view + own tasks only, no finance by default). Invite by link/email; leaving a household exports the leaver's personal items and removes shared access immediately.</td></tr>
+<tr><td>Home screen</td><td>Today strip: today's events + tasks, safe-to-spend, bills this week, low-stock count, and one goal highlight - in that priority order, each tappable to its module.</td></tr>
+<tr><td>Notifications</td><td>Per-user controls by type (task assigned/due, event reminder, bill due, budget alert, digest). Channels: web push + email in MVP. Defaults are quiet; budget alerts fire only at 80% and 100% of a budget.</td></tr>
+<tr><td>Search</td><td>One search box across tasks, events, transactions, inventory, and goals, with type filters. Results respect visibility - personal items never appear in a partner's search.</td></tr>
+<tr><td>Activity feed</td><td>Household activity (added/completed/edited) in one chronological feed, filterable by module. In finance this doubles as the audit history.</td></tr>
+</table>
+<div class="footer"><span>Tandem - PRD</span><span>Page 8 - Fitness, goals, cross-cutting</span></div>
+</div>
+
+<!-- PAGE 9 UX NFR RISKS -->
+<div class="page">
+<div class="kicker">Part I - Product Requirement Document</div>
+<h2>8. Experience, quality bar, risks, and launch gates</h2>
+<div class="two">
+<div>
+<h3>User experience requirements</h3>
+<ul>
+<li><b>Onboarding in under 5 minutes:</b> create account, create/join household, invite partner, pick 3 starter lists/budgets from templates, done. Full setup can be deferred without penalty.</li>
+<li><b>Empty states teach:</b> every empty module shows one example action ("Add your first bill") - never a blank screen or a tutorial video gate.</li>
+<li><b>Mobile-first:</b> all MVP flows completable one-handed on a phone-sized screen; desktop adds density (week grid, finance tables), not exclusive features.</li>
+<li><b>Accessibility:</b> WCAG 2.1 AA target - sufficient contrast, full keyboard operation, visible focus, screen-reader labels on icon actions, no meaning carried by colour alone (budget pace also uses words).</li>
+<li><b>Language:</b> Plain, warm, non-judgmental copy. Dates, numbers, and currency always formatted to the household's locale.</li>
+</ul>
+<h3>Non-functional requirements</h3>
+<table>
+<tr><th>Area</th><th>Bar for MVP</th></tr>
+<tr><td>Performance</td><td>Home screen interactive in under 2.5s on a mid-range phone / 4G; list screens paginate or virtualise beyond 100 items.</td></tr>
+<tr><td>Reliability</td><td>No data loss on refresh, crash, or offline edit; offline queue for tasks/inventory/transactions with visible sync state.</td></tr>
+<tr><td>Privacy</td><td>Household data visible only to its members; personal items visible only to their owner; encryption in transit and at rest; full data export and account deletion self-serve.</td></tr>
+<tr><td>Availability</td><td>99.5% monthly target for a small-team SaaS; status communicated in-app during incidents, never silent failure.</td></tr>
+</table>
+</div>
+<div>
+<h3>Top risks and mitigations</h3>
+<table>
+<tr><th>Risk</th><th>Mitigation</th></tr>
+<tr><td>Second-partner drop-off (one partner uses it, the other does not)</td><td>Design for the Doer (p.2); activation metric tracks both partners; digest gives the lighter user value without data entry.</td></tr>
+<tr><td>Finance data-entry fatigue</td><td>3-field entry, history-based suggestions, CSV import in MVP, recurring bills auto-created.</td></tr>
+<tr><td>Scope creep toward "everything app"</td><td>Phase gates in Section 2 are contractual; new modules need a phase decision, not a feature request.</td></tr>
+<tr><td>Trust incident (wrong visibility)</td><td>Visibility tests are release-blocking (see TDD); activity history on all shared finance edits.</td></tr>
+<tr><td>Health-data sensitivity (1.5)</td><td>Personal-by-default, explicit sharing, no advertising use - ever.</td></tr>
+</table>
+<h3>Launch gates (all must pass for public v1.0)</h3>
+<ol>
+<li>Both-partner flows (invite, shared task, shared expense, shared event) pass end-to-end tests on phone and desktop browsers.</li>
+<li>Visibility/privacy test suite passes with zero failures - a personal item leaking to a partner is a launch blocker, not a bug to triage later.</li>
+<li>Finance metric definitions on page 6 verified against a worked test dataset by hand.</li>
+<li>Export + account deletion work end-to-end and are reachable in 3 clicks from Settings.</li>
+<li>Private beta (10-20 households, 4 weeks) with no data-loss incidents and activation at or near target.</li>
+</ol>
+<h3>Open decisions for the PRD (owner: product)</h3>
+<ul>
+<li>Domain and visual identity for Tandem (product name confirmed); trademark check to complete before public launch.</li>
+<li>Free vs. paid shape (recommendation: free for one household's core; paid tier later for automation/integrations - decide before public launch, not before beta).</li>
+<li>First launch locale/currency defaults and date conventions.</li>
+</ul>
+</div>
+</div>
+<div class="footer"><span>Tandem - PRD</span><span>Page 9 - UX, quality, risks, launch gates</span></div>
+</div>
+<!-- PAGE 10 TDD ARCH -->
+<div class="page">
+<div class="kicker">Part II - Technical Design Document</div>
+<h2>9. Architecture: a modular monolith that can grow up later</h2>
+<p>For a small team, the fastest safe architecture is a <b>modular monolith</b> - one deployable web application with strict module boundaries (household, tasks, calendar, finance, inventory, goals, notifications) - backed by one relational database. It gives real-time sharing and transactional finance correctness without microservice overhead, and each module can be extracted later if scale ever demands it.</p>
+<div class="arch">
+<div class="abox"><b>Client</b>Responsive web app + PWA<br>Next.js (React) + TypeScript<br>Offline queue for capture flows</div>
+<div class="abox"><b>Edge / Delivery</b>CDN + HTTPS<br>PWA service worker<br>Web Push (VAPID)</div>
+<div class="abox warm"><b>Auth</b>Email + password / magic link<br>OAuth (Google) optional<br>Session + refresh tokens</div>
+<div class="abox"><b>Application (monolith)</b>Next.js App Router - Server Components + Route Handlers (REST API)<br>Modules: Household | Tasks | Calendar | Finance | Inventory | Goals | Notify</div>
+<div class="abox"><b>Jobs + Realtime</b>Background worker (queues)<br>Recurrence, reminders, digests, forecast<br>Realtime via Postgres listen / websocket gateway</div>
+<div class="abox"><b>Data</b>PostgreSQL (primary)<br>Object storage (receipts, photos)<br>Redis (cache, queues, rate limits) - optional in MVP</div>
+</div>
+<h3>Recommended stack (with the reason for each choice)</h3>
+<table>
+<tr><th style="width:24%">Layer</th><th style="width:34%">Choice</th><th>Why this, for this product</th></tr>
+<tr><td>Frontend + API</td><td>Next.js 14+ (App Router), TypeScript, Tailwind CSS</td><td>One codebase for UI and API, server rendering for fast first load, strong PWA story; a very common hiring/maintenance pool.</td></tr>
+<tr><td>Database</td><td>PostgreSQL + Prisma ORM (migrations in repo)</td><td>Household data is deeply relational and money needs transactions; Prisma keeps the schema readable and migrations reviewable.</td></tr>
+<tr><td>Auth</td><td>Auth.js (NextAuth) or equivalent, with household membership as app-level data</td><td>Proven session handling; household/role logic stays in the app where it can be tested, not hidden in the auth provider.</td></tr>
+<tr><td>Jobs</td><td>Queue-backed worker (e.g. BullMQ/Redis or a managed cron + job table)</td><td>Reminders, recurrence generation, digests, and forecasts must run reliably even when no user is online.</td></tr>
+<tr><td>Files</td><td>S3-compatible object storage, signed URLs, image resizing on upload</td><td>Receipts and inventory photos stay out of the database; signed URLs enforce household-only access.</td></tr>
+<tr><td>Hosting</td><td>Managed platform for the app + managed Postgres (e.g. Vercel/Render/Fly.io + Neon/Supabase/RDS - pick one pair at build start)</td><td>Small team should not operate Kubernetes for an MVP. Decision recorded as ADR-01 at kickoff.</td></tr>
+<tr><td>Observability</td><td>Structured logs, error tracking (Sentry-class), uptime check, product analytics (privacy-respecting, self-hostable option)</td><td>Finance/privacy bugs must be findable from logs without logging sensitive amounts or health data (see page 13).</td></tr>
+</table>
+<p class="small"><b>Stack note:</b> If the team prefers a separate API (FastAPI/NestJS) with a React frontend, the module boundaries, data model, and API contract still apply unchanged. Do not run both patterns at once.</p>
+<div class="footer"><span>Tandem - TDD</span><span>Page 10 - Architecture and stack</span></div>
+</div>
+
+<!-- PAGE 11 DATA MODEL -->
+<div class="page">
+<div class="kicker">Part II - Technical Design Document</div>
+<h2>10. Data model: household tenancy is the core invariant</h2>
+<p>Every domain row carries <code>household_id</code>. Every query is scoped by it, enforced in a single data-access layer and verified by tests - tenancy is never left to individual route handlers to remember. Money is stored as integer minor units (cents/paise) with a currency code; timestamps are UTC with the event's original timezone stored alongside where it matters.</p>
+<table>
+<tr><th style="width:26%">Table</th><th>Key columns (abridged) and notes</th></tr>
+<tr><td><code>users</code></td><td>id, email (unique), name, password_hash / auth provider id, locale, timezone, notification prefs (JSON)</td></tr>
+<tr><td><code>households</code></td><td>id, name, primary_currency, locale, created_by. The tenant root.</td></tr>
+<tr><td><code>memberships</code></td><td>household_id, user_id, role (partner/member/guest), status. Unique (household, user). All authorisation starts here.</td></tr>
+<tr><td><code>tasks</code></td><td>household_id, title, list_id, assignee_id(s), due_at, recurrence_rule (RRULE string), visibility, status, goal_id (nullable), completed_at</td></tr>
+<tr><td><code>events</code></td><td>household_id, calendar_id, title, starts_at, ends_at, tz, all_day, recurrence_rule, visibility, busy_only flag</td></tr>
+<tr><td><code>accounts</code></td><td>household_id, name, type, owner_user_id (nullable = joint), currency, balance_minor, credit_limit_minor</td></tr>
+<tr><td><code>transactions</code></td><td>household_id, account_id, amount_minor (signed), category_id, type, split_type + split detail, entered_by, occurred_on, import_batch_id (nullable)</td></tr>
+<tr><td><code>budgets / bills / savings_goals</code></td><td>household_id, category or name, amount_minor, period/frequency, next_due_on, rollover flag; goals add target_minor + linked account ids</td></tr>
+<tr><td><code>inventory_items</code></td><td>household_id, kind (grocery/home), name, quantity, unit, location/room, low_threshold, expiry_on, value_minor, warranty_until, status</td></tr>
+<tr><td><code>shopping_list_items</code></td><td>household_id, name, quantity, source (manual/low_stock), inventory_item_id (nullable), checked_at</td></tr>
+<tr><td><code>goals</code></td><td>household_id, title, target_date, linked ids (savings_goal, task, event, fitness_goal) - links, not copies</td></tr>
+<tr><td><code>fitness_* (1.5)</code></td><td>workouts, health_metrics (owner-private by default, share flag per metric type), fitness_goals. Reserved in schema design now; tables ship in 1.5.</td></tr>
+<tr><td><code>activity_log</code></td><td>household_id, actor_id, entity_type/id, action, diff (JSON), created_at. Append-only. Powers the activity feed and finance audit history.</td></tr>
+<tr><td><code>notifications / push_subs</code></td><td>user_id, type, payload, scheduled_for, sent_at; browser push subscriptions per device.</td></tr>
+</table>
+<h3>Invariants the database + service layer must enforce</h3>
+<ul>
+<li>A transaction's account and category must belong to the same household as the transaction.</li>
+<li>Balances are derived or transactionally maintained - never edited directly by a client; balance corrections are themselves transactions.</li>
+<li>Deleting a household soft-deletes first (30-day recovery), then hard-deletes including object storage - tested end-to-end.</li>
+<li>Personal-visibility rows are filtered in the data layer by <code>owner = current user</code>, in addition to household scoping.</li>
+</ul>
+<div class="footer"><span>Tandem - TDD</span><span>Page 11 - Data model</span></div>
+</div>
+<!-- PAGE 12 API -->
+<div class="page">
+<div class="kicker">Part II - Technical Design Document</div>
+<h2>11. APIs, realtime, and the jobs that run the household clock</h2>
+<h3>API shape</h3>
+<p>REST over the Next.js Route Handlers under <code>/api/v1/</code>, JSON in/out, validated with a schema validator (e.g. Zod) sharing types with the frontend. Every list endpoint supports cursor pagination; every write returns the full updated entity so the client never guesses state.</p>
+<pre>POST   /api/v1/households            create household
+POST   /api/v1/households/:id/invite invite partner/member
+GET    /api/v1/tasks?view=today      today / week / list views
+POST   /api/v1/tasks                 create (idempotency-key supported)
+PATCH  /api/v1/tasks/:id             edit incl. recurrence scope
+GET    /api/v1/events?from&to        range query for calendar views
+POST   /api/v1/transactions          add income/expense/transfer
+GET    /api/v1/finance/dashboard     all page-6 metrics, one call
+POST   /api/v1/transactions/import   CSV import (preview -> commit)
+GET    /api/v1/inventory?kind=grocery
+POST   /api/v1/shopping-list/:id/check  restock + optional expense
+GET    /api/v1/search?q=             cross-module, visibility-filtered
+GET    /api/v1/export                full household/personal export (CSV/ZIP)</pre>
+<h3>Realtime sharing</h3>
+<ul>
+<li>When Partner A creates/completes a shared item, Partner B's open app reflects it within ~5 seconds (PRD acceptance). Implementation: server-sent events or a lightweight websocket channel per household, with polling fallback; payloads carry entity id + version, clients refetch the entity - no complex CRDT needed at household scale (2-6 users).</li>
+<li>Conflict rule: last-write-wins per field group with optimistic locking (<code>version</code> column); a stale write returns 409 and the client shows "updated by your partner - review" rather than overwriting.</li>
+<li>Offline: capture flows (task, expense, stock change) queue locally with client-generated ids and idempotency keys; sync replays in order and surfaces (never hides) any conflict.</li>
+</ul>
+<h3>Background jobs (the household clock)</h3>
+<table>
+<tr><th style="width:28%">Job</th><th>What it does</th></tr>
+<tr><td>Recurrence generator</td><td>Materialises upcoming task/event/bill occurrences on a rolling window (e.g. next 90 days); idempotent by (series id, occurrence date).</td></tr>
+<tr><td>Reminder dispatcher</td><td>Scans due reminders every minute; sends push/email per user prefs; records delivery in <code>notifications</code>.</td></tr>
+<tr><td>Bill + forecast builder</td><td>Nightly per household: recomputes cash-flow forecast and bills-due windows; caches the dashboard payload.</td></tr>
+<tr><td>Digest composer</td><td>Weekly: assembles the digest (tasks, budgets at risk, bills, goal update) and sends per opt-in.</td></tr>
+<tr><td>Low-stock + expiry sweep</td><td>Daily: ensures low-stock items are on the shopping list exactly once; builds the "use soon" list.</td></tr>
+</table>
+<h3>Finance calculation engine</h3>
+<p>All page-6 metrics come from one pure, unit-tested service (<code>finance/metrics</code>) - never re-implemented per screen. A golden dataset with hand-computed outputs is a permanent regression fixture.</p>
+<div class="footer"><span>Tandem - TDD</span><span>Page 12 - APIs, realtime, jobs, finance engine</span></div>
+</div>
+
+<!-- PAGE 13 SECURITY -->
+<div class="page">
+<div class="kicker">Part II - Technical Design Document</div>
+<h2>12. Security, privacy, testing, and operations</h2>
+<div class="two">
+<div>
+<h3>Authentication and authorisation</h3>
+<ul>
+<li>Passwords hashed with a modern adaptive hash (argon2/bcrypt); magic-link and Google OAuth as alternatives; sessions are httpOnly, secure, same-site cookies with refresh rotation.</li>
+<li>Authorisation check order on every request: authenticated user, then household membership, then role, then row visibility (shared vs. personal, finance access for guest/child roles).</li>
+<li>Rate limits on auth, invite, import, and export endpoints; invite links are single-household, expiring, and revocable.</li>
+<li>Step-up confirmation (re-enter password / confirm) for: household deletion, member removal, and full data export download.</li>
+</ul>
+<h3>Privacy by construction</h3>
+<ul>
+<li>No advertising SDKs, no sale or sharing of household data, analytics events carry ids and counts - never amounts, item names, or health values.</li>
+<li>Logs redact amounts, emails, and free-text fields; error reports strip payloads by default.</li>
+<li>Encryption in transit (TLS everywhere) and at rest (managed DB + encrypted object storage); signed, short-lived URLs for every file.</li>
+<li>Self-serve export and deletion (PRD launch gate), with deletion covering DB rows, files, push subscriptions, and analytics identifiers.</li>
+</ul>
+</div>
+<div>
+<h3>Testing strategy (release-blocking items marked *)</h3>
+<table>
+<tr><th>Layer</th><th>Coverage that matters here</th></tr>
+<tr><td>Unit</td><td>Finance metrics on the golden dataset*; recurrence expansion incl. month-end and DST edges*; split/settlement maths*</td></tr>
+<tr><td>API / integration</td><td>Tenancy isolation (Household B can never read Household A)*; visibility filtering*; idempotent offline replay; import preview/commit/rollback</td></tr>
+<tr><td>End-to-end</td><td>Invite + both-partner flows*; shopping-list to stock to expense chain; reminder delivery timing</td></tr>
+<tr><td>Load / resilience</td><td>Dashboard under 2.5s with 5 years of transactions; job idempotency under duplicate runs</td></tr>
+</table>
+<h3>DevOps and environments</h3>
+<ul>
+<li>Environments: local, staging (seeded demo household), production. CI runs lint, types, unit + API tests, and migration checks on every PR; merges to main auto-deploy to staging.</li>
+<li>Database migrations are forward-only in production with a tested rollback plan per release; daily automated backups with a rehearsed restore (test restore monthly).</li>
+<li>Feature flags for Phase 1.5+ modules (fitness, sync) so code can ship dark; kill switch for push/email sending.</li>
+<li>Monitoring: uptime, API latency/error dashboards, job-success alerts, and a privacy-safe product funnel (signup, invite accepted, first shared action).</li>
+</ul>
+</div>
+</div>
+<div class="callout"><b>The one rule above all others:</b> a cross-household or partner-visibility leak is a severity-1 incident - stop, fix, audit the activity log, and disclose to affected households. Every other bug queues behind that principle.</div>
+<div class="footer"><span>Tandem - TDD</span><span>Page 13 - Security, privacy, testing, operations</span></div>
+</div>
+<!-- PAGE 14 FUTURE + BUILD SEQUENCE -->
+<div class="page">
+<div class="kicker">Part II - Technical Design Document</div>
+<h2>13. Future architecture, build sequence, and decisions</h2>
+<h3>Designing now for what comes later</h3>
+<table>
+<tr><th style="width:24%">Future feature</th><th>What MVP does today so it stays cheap later</th></tr>
+<tr><td>Fitness (1.5)</td><td>Goals already link across modules; health data gets its own tables with owner-private defaults; wearable import is an adapter interface (manual entry implements it first).</td></tr>
+<tr><td>Bank aggregation</td><td>Transactions already carry <code>import_batch_id</code> and external-id fields; an aggregator becomes another import source behind the same preview/commit flow.</td></tr>
+<tr><td>Native mobile</td><td>All logic sits behind the versioned REST API; the PWA proves the flows first. Push, offline queue, and idempotency contracts are app-agnostic.</td></tr>
+<tr><td>Home automation (Phase 3)</td><td>A separate <b>device service</b> boundary is reserved: devices, states, and automations live outside the core monolith, reached via an integration layer (Matter / Home Assistant-class bridges and vendor APIs such as garage-door and lighting platforms). Core rule: automation failure must never block or corrupt tasks/calendar/finance - the household app degrades to "device unavailable", full stop. Device credentials are stored in a secrets vault, never in the main database, and every automation action is written to the activity log.</td></tr>
+</table>
+<h3>Build sequence - vertical slices, in order</h3>
+<table>
+<tr><th style="width:10%">Slice</th><th style="width:52%">Deliverable</th><th>Done when</th></tr>
+<tr><td>S1</td><td>Auth, households, invites, roles, home shell, activity log</td><td>Two accounts share one household end-to-end</td></tr>
+<tr><td>S2</td><td>Tasks (CRUD, recurrence, assignment, Today/Week views)</td><td>A real week of chores runs in the app</td></tr>
+<tr><td>S3</td><td>Calendar (events, Week view with task overlay, reminders job)</td><td>Reminders fire on time in staging</td></tr>
+<tr><td>S4</td><td>Finance core (accounts, transactions, categories, budgets, bills)</td><td>Golden-dataset metrics match hand calculations</td></tr>
+<tr><td>S5</td><td>Finance dashboard, forecast, settlements, CSV import, monthly review</td><td>Page-6 metrics all live from one service</td></tr>
+<tr><td>S6</td><td>Inventory (groceries, shopping list chain, home items, rooms)</td><td>Low-stock to bought to expense flow passes E2E</td></tr>
+<tr><td>S7</td><td>Search, digest, push/email notifications, export + deletion, PWA polish</td><td>All page-9 launch gates pass</td></tr>
+<tr><td>S8</td><td>Private beta hardening (bugfix, performance, onboarding templates)</td><td>Beta exit criteria on page 9 are met</td></tr>
+</table>
+<div class="footer"><span>Tandem - TDD</span><span>Page 14 - Future architecture, build sequence</span></div>
+</div>
+
+<!-- PAGE 15 DECISIONS -->
+<div class="page">
+<div class="kicker">Part II - Technical Design Document</div>
+<h2>14. Decisions, risks, and what to do next</h2>
+<h3>Key architecture decisions (ADR summary)</h3>
+<ul>
+<li><b>ADR-01 Hosting pair</b> - choose app host + managed Postgres at kickoff; optimise for boring reliability over novelty.</li>
+<li><b>ADR-02 Monolith first</b> - extract a service only on measured pain (first candidate: the jobs/realtime worker, then the Phase-3 device service).</li>
+<li><b>ADR-03 Money as integers</b> - minor units + currency code everywhere; floating point never touches money.</li>
+<li><b>ADR-04 RRULE for recurrence</b> - store the standard rule string, materialise occurrences in jobs; do not invent a custom recurrence format.</li>
+</ul>
+<h3>Open technical decisions (needed by the slice named)</h3>
+<table>
+<tr><th>Decision</th><th style="width:22%">Needed by</th></tr>
+<tr><td>Final hosting pair and region (data-residency preference for launch locale)</td><td>S1</td></tr>
+<tr><td>Email + push provider selection</td><td>S3</td></tr>
+<tr><td>CSV import column-mapping UX (auto-detect vs. user mapping - recommend user-confirmed mapping)</td><td>S5</td></tr>
+<tr><td>Wearable/health import source for Fitness (manual-first is the fallback)</td><td>Phase 1.5 planning</td></tr>
+<tr><td>Home-automation bridge shortlist (Matter/Home Assistant-class vs. vendor-direct)</td><td>Phase 3 planning only</td></tr>
+</table>
+<div class="callout teal"><b>Bottom line:</b> Build S1-S7 in order, keep the phase gates honest, and this product reaches a trustworthy, genuinely useful v1.0 in roughly 10-12 weeks for a small team - with fitness, native apps, and home automation as designed-for extensions, not rewrites.</div>
+<p class="small" style="margin-top:10px">Document ends. Companion next steps (not in scope here): clickable prototype / wireframes for the Week view and money dashboard, a starter backlog in issue form, and a beta recruitment plan. Ask for any of these as a follow-on document.</p>
+<div class="footer"><span>Tandem - TDD</span><span>Page 15 - Decisions and next steps</span></div>
+</div>
+</body></html>
