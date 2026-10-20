@@ -46,6 +46,8 @@ final class TodoTask {
     var isCompleted: Bool
     var completedAt: Date?
     var createdAt: Date
+    /// Optional assignee. nil means the task is shared by the whole household.
+    var member: Member?
 
     var recurrence: TaskRecurrence {
         get { TaskRecurrence(rawValue: recurrenceRaw) ?? .none }
@@ -63,7 +65,8 @@ final class TodoTask {
          reminderEnabled: Bool = false,
          reminderDate: Date = Date(),
          recurrence: TaskRecurrence = .none,
-         priority: TaskPriority = .normal) {
+         priority: TaskPriority = .normal,
+         member: Member? = nil) {
         self.id = UUID()
         self.title = title
         self.notes = notes
@@ -75,5 +78,6 @@ final class TodoTask {
         self.isCompleted = false
         self.completedAt = nil
         self.createdAt = Date()
+        self.member = member
     }
 }

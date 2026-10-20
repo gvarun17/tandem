@@ -42,4 +42,38 @@ final class NotificationManager {
     func cancelReminder(for task: TodoTask) {
         center.removePendingNotificationRequests(withIdentifiers: [task.id.uuidString])
     }
+
+    // MARK: - Event reminders
+
+    private func eventIdentifier(for event: CalendarEvent) -> String {
+        "event-\(event.id.uuidString)"
+    }
+
+    /// (Re)schedules the reminder for a calendar event. No-ops when the
+    /// event has no reminder set or the time has already passed.
+    func scheduleEventReminder(for event: CalendarEvent) {
+        cancelEventReminder(for: event)
+        guard let reminderDate = event.reminderDate, reminderDate > Date() else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Event reminder"
+        content.body = event.title
+        content.sound = .default
+
+        let components = Calendar.current.dateComponents(
+            [.year, .month, .day, .hour, .minute],
+            from: reminderDate
+        )
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: eventIdentifier(for: event),
+            content: content,
+            trigger: trigger
+        )
+        center.add(request)
+    }
+
+    func cancelEventReminder(for event: CalendarEvent) {
+        center.removePendingNotificationRequests(withIdentifiers: [eventIdentifier(for: event)])
+    }
 }

@@ -20,10 +20,16 @@ Phase 3 reserves a boundary for **home automation** (garage doors, lights).
 
 ```
 docs/   Product Requirement Document + Technical Design Document
-ios/    iOS prototype — SwiftUI to-do tasks with reminders (see ios/README.md)
+ios/    iOS app — full-feature on-device beta (see ios/README.md)
 ```
 
 ## Status
 
-Design phase. The PRD and TDD live in `docs/`; a working iOS prototype of the
-tasks module lives in `ios/`.
+Full-feature **on-device iOS beta built**: Tasks, Calendar, Money
+(budgets, savings rate, safe-to-spend, budget pace), Home inventory +
+shopping list, Fitness goals/log/encouragement, and local household
+members — all in SwiftUI + SwiftData with local notifications, in
+`ios/`. The PRD and TDD live in `docs/`.
+
+Next, per the TDD: the cloud backend (accounts, household tenancy,
+sync), then HealthKit integration and home automation (Phase 3).

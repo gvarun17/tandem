@@ -5,8 +5,20 @@ import SwiftData
 struct TandemApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainTabView()
         }
-        .modelContainer(for: TodoTask.self)
+        .modelContainer(for: [
+            TodoTask.self,
+            Member.self,
+            CalendarEvent.self,
+            Transaction.self,
+            Budget.self,
+            SavingsGoal.self,
+            InventoryItem.self,
+            ShoppingItem.self,
+            FitnessGoal.self,
+            WorkoutLog.self,
+            Encouragement.self
+        ])
     }
 }
